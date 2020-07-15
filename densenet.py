@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.utils.checkpoint as cp
 from collections import OrderedDict
-from .utils import load_state_dict_from_url
+#from .utils import load_state_dict_from_url
 from torch import Tensor
 from torch.jit.annotations import List
 
@@ -14,8 +14,6 @@ from torch.jit.annotations import List
 
 """
 
-
-
 __all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161']
 
 model_urls = {
@@ -24,6 +22,8 @@ model_urls = {
     'densenet201': 'https://download.pytorch.org/models/densenet201-c1103571.pth',
     'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
 }
+
+DEFAULT_CLASS_NUM = 200
 
 
 class _DenseLayer(nn.Module):
@@ -146,7 +146,7 @@ class DenseNet(nn.Module):
     """
 
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
-                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False):
+                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=DEFAULT_CLASS_NUM, memory_efficient=False):
 
         super(DenseNet, self).__init__()
 
