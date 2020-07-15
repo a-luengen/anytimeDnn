@@ -9,7 +9,7 @@ class ResNet(nn.Module):
         Modified ResNet class to use the Convolution implementation in OpenCL
     """
 
-    def __init__(self, block, num_block, num_classes=100, use_ocl=False):
+    def __init__(self, block, num_block, num_classes=200, use_ocl=False):
         super().__init__()
         self.use_ocl = use_ocl
         self.in_channels = 64
@@ -50,7 +50,8 @@ class ResNet(nn.Module):
         strides = [stride] + [1] * (num_blocks - 1)
         layers = []
         for stride in strides:
-            layers.append(block(self.in_channels, out_channels, stride, use_ocl=self.use_ocl))
+            #layers.append(block(self.in_channels, out_channels, stride, use_ocl=self.use_ocl))
+            layers.append(block(self.in_channels, out_channels, stride))
             self.in_channels = out_channels * block.expansion
         
         return nn.Sequential(*layers)
