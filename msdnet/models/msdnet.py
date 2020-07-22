@@ -208,6 +208,8 @@ class MSDNet(nn.Module):
         self.steps = [args.base]
         self.args = args
         
+        NUMBER_OF_CLASSES = 200 # Default 1000
+
         n_layers_all, n_layer_curr = args.base, 0
         for i in range(1, self.nBlocks):
             self.steps.append(args.step if args.stepmode == 'even'
@@ -235,7 +237,7 @@ class MSDNet(nn.Module):
                     self._build_classifier_cifar(nIn * args.grFactor[-1], 10))
             elif args.data == 'ImageNet':
                 self.classifier.append(
-                    self._build_classifier_imagenet(nIn * args.grFactor[-1], 1000))
+                    self._build_classifier_imagenet(nIn * args.grFactor[-1], NUMBER_OF_CLASSES))
             else:
                 raise NotImplementedError
 
