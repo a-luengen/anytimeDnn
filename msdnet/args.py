@@ -48,7 +48,7 @@ arch_group.add_argument('--arch', '-a', metavar='ARCH', default='resnet',
                         ' (default: msdnet)')
 arch_group.add_argument('--reduction', default=0.5, type=float,
                         metavar='C', help='compression ratio of DenseNet'
-                        ' (1 means dot\'t use compression) (default: 0.5)')
+                        ' (1 means don\'t use compression) (default: 0.5)')
 
 # msdnet config
 arch_group.add_argument('--nBlocks', type=int, default=1)
