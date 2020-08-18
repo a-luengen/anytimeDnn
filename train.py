@@ -46,10 +46,10 @@ if __name__ == "__main__":
         workers=2, 
         splits=['train', 'test'])
 
-    #model = ResNet.resnet50()
+    model = ResNet.resnet101()
     #model = densenet121()
 
-    model = get_msd_net_model()
+    #model = get_msd_net_model()
 
 
     #model.eval()
@@ -61,4 +61,6 @@ if __name__ == "__main__":
             pred = model(input)
             print(pred[0].shape)
             print(pred)
+
+            
         break

@@ -9,7 +9,7 @@ class ResNet(nn.Module):
         Modified ResNet class to use the Convolution implementation in OpenCL
     """
 
-    def __init__(self, block, num_block, num_classes=200, use_ocl=False):
+    def __init__(self, block, num_block, num_classes=40, use_ocl=False):
         super().__init__()
         self.use_ocl = use_ocl
         self.in_channels = 64
