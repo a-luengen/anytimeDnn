@@ -46,7 +46,6 @@ testpath==0.4.4
 tifffile==2020.7.4
 torch==1.5.1
 torchvision==0.6.1
-tornado==6.0.4
 traitlets==4.3.3
 wcwidth==0.2.5
 webencodings==0.5.1

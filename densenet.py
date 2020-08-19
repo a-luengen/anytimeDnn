@@ -23,7 +23,7 @@ model_urls = {
     'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
 }
 
-DEFAULT_CLASS_NUM = 200
+DEFAULT_CLASS_NUM = 40
 
 
 class _DenseLayer(nn.Module):
