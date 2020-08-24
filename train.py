@@ -6,15 +6,21 @@ import torch.backends.cudnn as cudnn
 
 from msdnet.dataloader import get_dataloaders_alt
 from resnet import ResNet
-from densenet import *
+import densenet.densenet as dn
+#from densenet import *
 #from msdnet.models.msdnet import MSDNet
 
 import os
 import shutil
 import time
+import datetime
 import sys
+import logging
 
-from utils import get_msd_net_model, save_checkpoint, AverageMeter, get_batch_size_stats
+from utils import *
+#from utils import get_msd_net_model, save_checkpoint, AverageMeter, get_batch_size_stats
+
+IS_DEBUG = False
 
 # for repo:
 DATA_PATH = "data/imagenet_images"
@@ -29,35 +35,46 @@ MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-4
 GPU_ID = None
 START_EPOCH = 0
-EPOCHS = 1
-CHECKPOINT_INTERVALL = 10
+EPOCHS = 90
+CHECKPOINT_INTERVALL = 30
 CHECKPOINT_DIR = 'checkpoints'
 ARCH = 'resnet50'
+
+ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152']
 
 def main(argv):
     torch.cuda.empty_cache()
 
     n_gpus_per_node = torch.cuda.device_count()
-    print(f"Found {n_gpus_per_node} GPU(-s)")
+    logging.info(f"Found {n_gpus_per_node} GPU(-s)")
 
     # create model 
-    model = ResNet.resnet50()
-    
-    
-    if not torch.cuda.is_available():
-      print("Using CPU for slow training process")
+    model = None
+    if ARCH == 'resnet50':
+        model = ResNet.resnet50()
+    elif ARCH == 'resnet101':
+        model = ResNet.resnet101()
+    elif ARCH == 'resnet152':
+        model = ResNet.resnet152()
     else:
-      print("Cuda is available")
+        model = ResNet.resnet50()
+    
+    logging.info(f"Training Arch:{ARCH}")
+
+    if not torch.cuda.is_available():
+      logging.warning("Using CPU for slow training process")
+    else:
+      logging.debug("Cuda is available")
       if GPU_ID is not None:
         torch.cuda.set_device(GPU_ID)
         model.cuda(GPU_ID)
       else:
-        print("Using all available GPUs")
+        logging.info("Using all available GPUs")
         model = nn.DataParallel(model).cuda()
     
     # loss function (criterion) and optimizer
     if torch.cuda.is_available():
-      print("Move cross entropy to device")
+      logging.info("Move cross entropy to device")
       criterion = nn.CrossEntropyLoss().cuda()
     else:
       criterion = nn.CrossEntropyLoss()
@@ -73,27 +90,26 @@ def main(argv):
     train_loader, test_loader, _ = get_dataloaders_alt(
         DATA_PATH, 
         data="ImageNet", 
-        use_valid=False, 
-        save='save/default-{}'.format(time.time()),
+        use_valid=True, 
+        save='data/default-{}'.format(datetime.datetime.now()),
         batch_size=BATCH_SIZE, 
         workers=NUM_WORKERS, 
-        splits=['train', 'test'])
+        splits=['train', 'val', 'test'])
     
     # size of batch:
-    print(get_batch_size_stats(train_loader))
+    logging.debug(get_batch_size_stats(train_loader))
     
     # train loop
-    #for epoch in range(START_EPOCH, EPOCHS):
     best_acc = 0.0
     for epoch in range(START_EPOCH, EPOCHS):
         adjust_learning_rate(optimizer, epoch)
         
         # train for one epoch
-        print('Running train loop')
+        logging.debug('Running train loop')
         train(train_loader, model, criterion, optimizer, epoch)
         
         #evaluate the network on test set
-        print('Compute accuracy')
+        logging.debug('Compute accuracy')
         acc = validate(test_loader, model, criterion)
         
         # remember top acc
@@ -173,20 +189,18 @@ def train(train_loader, model, criterion, optimizer, epoch):
         batch_time.update(time.time() - end)
         end = time.time()
 
-
-        return
-
         # printing statistics every 2000 mini batch size
         if i % STAT_FREQUENCY == STAT_FREQUENCY - 1:
-            print(f'Stats of Train loop {i} of {len(train_loader)}')
+            logging.info(f'Stats of Train loop {i} of {len(train_loader)}')
             # measure accuracy and record loss
             
-            print(f'Epoch {epoch} - Iteration {i}/{len(train_loader)} - Loss {loss}')
-            print(top1)
-            print(top5)
-            print(batch_time)
-            print(data_load_time)
-            return
+            logging.info(f'Epoch {epoch} - Iteration {i}/{len(train_loader)} - Loss {loss}')
+            logging.info(top1)
+            logging.info(top5)
+            logging.info(batch_time)
+            logging.info(data_load_time)
+            if IS_DEBUG:
+                return
 
 def validate(val_loader, model, criterion):
     """Compute average accuracy, top 1 and top 5 accuracy"""
@@ -224,13 +238,68 @@ def validate(val_loader, model, criterion):
             return top1.avg
 
             if i % STAT_FREQUENCY == STAT_FREQUENCY - 1:
-                print(f'validation loop {i} of {len(val_loader)}')
-                print(losses)
-                print(top1)
-                print(top5)
-                print(batch_time)
-                return top1.avg
+                logging.info(f'validation loop {i} of {len(val_loader)}')
+                logging.info(losses)
+                logging.info(top1)
+                logging.info(top5)
+                logging.info(batch_time)
+                if IS_DEBUG:
+                    return top1.avg
     return top1.avg
 
+def loadAndEvaluate():
+    model = ResNet.resnet50()
+    if os.path.exists(os.path.join(CHECKPOINT_DIR, ARCH + '_model_best.pth.tar')):
+        logging.debug("Loading best model")
+        load_path = os.path.join(CHECKPOINT_DIR, ARCH + '_model_best.pth.tar')
+    else:
+        logging.debug("Loading default model")
+        load_path = os.path.join(CHECKPOINT_DIR, ARCH + '_checkpoint.pth.tar')
+    
+    logging.debug('Loading: ' + load_path)
+
+    device = torch.device('cpu')
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+        logging.debug("Loading directly to device")
+    checkpoint = torch.load(load_path, map_location=device)
+    model.load_state_dict(checkpoint["state_dict"])
+    model.to(device)
+
+    logging.debug('Loading Test Data..')
+
+    _, _, testLoader = get_dataloaders_alt(
+        DATA_PATH, 
+        data="ImageNet", 
+        use_valid=True, 
+        save='data/default-{}'.format(datetime.datetime.now()),
+        batch_size=BATCH_SIZE, 
+        workers=NUM_WORKERS, 
+        splits=['train', 'val', 'test'])
+    
+    model.eval()
+    logging.debug('Loaded testData with {} testImages and {} images per tensor.'.format(len(testLoader.dataset), BATCH_SIZE))
+
+    classes = getClasses(os.path.join(DATA_PATH, 'val'))
+    pred, grndT = [], []
+    for i, (images, labels) in enumerate(testLoader):
+        logging.debug(f"Evaluating: {i}-th iteration")
+        outputs = model(images)
+        _, predicted = torch.max(outputs, 1)
+        pred = pred + [classes[predicted[k]] for k in range(BATCH_SIZE)]
+        grndT = grndT + [classes[labels[j]] for j in range(BATCH_SIZE)]
+        if i == 1 and IS_DEBUG:
+           break
+
+    printStats(grndT, pred)
+
 if __name__ == "__main__":
-   main(sys.argv)
+    curTime = datetime.datetime.now()
+
+    log_level = logging.INFO
+    if IS_DEBUG:
+        log_level = logging.DEBUG
+
+    logging.basicConfig(filename=str(curTime) + ".log", level=log_level)
+    main(sys.argv)
+    loadAndEvaluate()

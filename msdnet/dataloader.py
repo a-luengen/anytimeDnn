@@ -3,6 +3,7 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import os
+import logging
 
 
 def get_dataloaders(args):
@@ -69,11 +70,12 @@ def get_dataloaders_alt(data_root, data, use_valid, save, batch_size, workers, s
         ]))
     if use_valid:
         train_set_index = torch.randperm(len(train_set))
-        if os.path.exists(os.path.join(save, 'index.pth')):
-            print('!!!!!! Load train_set_index !!!!!!')
+        if False and os.path.exists(os.path.join(save, 'index.pth')):
+            logging.info('!!!!!! Load train_set_index !!!!!!')
             train_set_index = torch.load(os.path.join(save, 'index.pth'))
-        else:
-            print('!!!!!! Save train_set_index !!!!!!')
+        elif False:
+            logging.info('!!!!!! Save train_set_index !!!!!!')
+            os.mkdir(save)
             torch.save(train_set_index, os.path.join(save, 'index.pth'))
         if data.startswith('cifar'):
             num_sample_valid = 5000

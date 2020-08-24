@@ -1,7 +1,9 @@
 import argparse
 import os
 import shutil
+import logging
 import torch
+from sklearn import metrics
 from msdnet.models.msdnet import MSDNet
 
 def get_msd_net_model():
@@ -26,16 +28,22 @@ def get_msd_net_model():
 def save_checkpoint(state, is_best: bool, arch: str, checkpoint_dir: str, filename=None):
     
     if filename is None:
-        filename = f'{arch}_checkpoint.pth.tar'
+        filename = state["arch"] + '_checkpoint.pth.tar'
 
     if not os.path.isdir(checkpoint_dir):
         os.mkdir(checkpoint_dir)
     
     torch.save(state, filename)
-    print(checkpoint_dir, filename)
+    logging.debug(os.path.join(checkpoint_dir, filename))
+
+    target = os.path.join(os.path.basename(checkpoint_dir), filename)
+    if os.path.exists(target):
+        os.remove(target)
     shutil.move(filename, os.path.basename(checkpoint_dir))
+
+
     if is_best:
-        shutil.copyfile(filename, os.path.join(checkpoint_dir, f'{arch}_model_best.pth.tar'))
+        shutil.copyfile(filename, os.path.join(checkpoint_dir, state["arch"] + '_model_best.pth.tar'))
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -70,5 +78,17 @@ def get_batch_size_stats(loader):
         n_elements = target.nelement()
         size_in_byte = element_size_in_byte * n_elements
         txt += f"Target:\n{n_elements} Elements times {element_size_in_byte} bytes is {size_in_byte}"
-        break
+        break # intended break
     return txt
+
+def printStats(ground_truth, predicted):
+    logging.info("Confussion matrix:")
+    logging.info(metrics.confusion_matrix(ground_truth, predicted))
+    logging.info("Recall and precision:")
+    logging.info(metrics.classification_report(ground_truth, predicted, digits=3))
+
+def getClasses(data_path: str):
+    class_list = os.listdir(data_path)
+    logging.debug(class_list)
+    logging.debug(len(class_list))
+    return class_list
