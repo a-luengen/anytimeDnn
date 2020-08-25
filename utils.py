@@ -68,18 +68,17 @@ class AverageMeter(object):
 
 def get_batch_size_stats(loader):
     txt = ""
-    for i, (input, target) in enumerate(loader):
-      if i == 0:
-        element_size_in_byte = input.element_size()
-        n_elements = input.nelement()
-        size_in_byte = element_size_in_byte * n_elements
-        txt += f"Input:\n{n_elements} Elements times {element_size_in_byte} bytes is {size_in_byte}\n"
-        element_size_in_byte = target.element_size()
-        n_elements = target.nelement()
-        size_in_byte = element_size_in_byte * n_elements
-        txt += f"Target:\n{n_elements} Elements times {element_size_in_byte} bytes is {size_in_byte}"
-        break # intended break
-    return txt
+    for i, (images, target) in enumerate(loader):
+        if i == 0:
+            element_size_in_byte = images.element_size()
+            n_elements = images.nelement()
+            size_in_byte = element_size_in_byte * n_elements
+            txt += f"Input:\n{n_elements} Elements times {element_size_in_byte} bytes is {size_in_byte}\n"
+            element_size_in_byte = target.element_size()
+            n_elements = target.nelement()
+            size_in_byte = element_size_in_byte * n_elements
+            txt += f"Target:\n{n_elements} Elements times {element_size_in_byte} bytes is {size_in_byte}"
+            return txt
 
 def printStats(ground_truth, predicted):
     logging.info("Confussion matrix:")

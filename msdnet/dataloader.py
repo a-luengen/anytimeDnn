@@ -68,19 +68,23 @@ def get_dataloaders_alt(data_root, data, use_valid, save, batch_size, workers, s
             transforms.ToTensor(),
             normalize
         ]))
+
     if use_valid:
         train_set_index = torch.randperm(len(train_set))
-        if False and os.path.exists(os.path.join(save, 'index.pth')):
+        if os.path.exists(os.path.join(save, 'index.pth')):
             logging.info('!!!!!! Load train_set_index !!!!!!')
             train_set_index = torch.load(os.path.join(save, 'index.pth'))
-        elif False:
+        else:
             logging.info('!!!!!! Save train_set_index !!!!!!')
             os.mkdir(save)
             torch.save(train_set_index, os.path.join(save, 'index.pth'))
+
         if data.startswith('cifar'):
             num_sample_valid = 5000
         else:
-            num_sample_valid = 50000
+            #num_sample_valid = 50000
+            # take 10% of the train set as validation set
+            num_sample_valid = int(len(train_set) * 0.1)
 
         if 'train' in splits:
             train_loader = torch.utils.data.DataLoader(

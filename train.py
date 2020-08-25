@@ -40,7 +40,7 @@ CHECKPOINT_INTERVALL = 30
 CHECKPOINT_DIR = 'checkpoints'
 ARCH = 'resnet50'
 
-ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152']
+ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet', 'msdnet']
 
 def main(argv):
     torch.cuda.empty_cache()
@@ -49,15 +49,7 @@ def main(argv):
     logging.info(f"Found {n_gpus_per_node} GPU(-s)")
 
     # create model 
-    model = None
-    if ARCH == 'resnet50':
-        model = ResNet.resnet50()
-    elif ARCH == 'resnet101':
-        model = ResNet.resnet101()
-    elif ARCH == 'resnet152':
-        model = ResNet.resnet152()
-    else:
-        model = ResNet.resnet50()
+    model = getModel()
     
     logging.info(f"Training Arch:{ARCH}")
 
@@ -66,6 +58,8 @@ def main(argv):
     else:
       logging.debug("Cuda is available")
       if GPU_ID is not None:
+        logging.info(f"Using specific GPU: {GPU_ID}")
+        logging.warning("This will reduce the training speed significantly.")
         torch.cuda.set_device(GPU_ID)
         model.cuda(GPU_ID)
       else:
@@ -91,7 +85,7 @@ def main(argv):
         DATA_PATH, 
         data="ImageNet", 
         use_valid=True, 
-        save='data/default-{}'.format(datetime.datetime.now()),
+        save='data/{}-{}'.format(ARCH, datetime.datetime.now().strftime("%Y-%m-%d-%H")),
         batch_size=BATCH_SIZE, 
         workers=NUM_WORKERS, 
         splits=['train', 'val', 'test'])
@@ -99,6 +93,7 @@ def main(argv):
     # size of batch:
     logging.debug(get_batch_size_stats(train_loader))
     
+
     # train loop
     best_acc = 0.0
     for epoch in range(START_EPOCH, EPOCHS):
@@ -125,7 +120,24 @@ def main(argv):
                 'best_acc': best_acc,
                 'optimizer': optimizer.state_dict(),
             }, is_best, ARCH, CHECKPOINT_DIR)
+        
+        if IS_DEBUG:
+            break
 
+def getModel():
+    model = None
+    logging.info(f"Loading model: {ARCH}")
+    if ARCH == 'resnet50':
+        model = ResNet.resnet50()
+    elif ARCH == 'resnet101':
+        model = ResNet.resnet101()
+    elif ARCH == 'resnet152':
+        model = ResNet.resnet152()
+    elif ARCH == 'densenet':
+        model = dn.DenseNet3(3, 40)
+    else:
+        model = ResNet.resnet50()
+    return model
 
 def accuracy(output, target, topk=(1,)):
     """Computes accuracy over the k top predictions for the values of k"""
@@ -143,7 +155,6 @@ def accuracy(output, target, topk=(1,)):
         for k in topk:
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
-        #print(res)
         return res
 
 def adjust_learning_rate(optimizer, epoch):
@@ -248,7 +259,8 @@ def validate(val_loader, model, criterion):
     return top1.avg
 
 def loadAndEvaluate():
-    model = ResNet.resnet50()
+    model = getModel()
+
     if os.path.exists(os.path.join(CHECKPOINT_DIR, ARCH + '_model_best.pth.tar')):
         logging.debug("Loading best model")
         load_path = os.path.join(CHECKPOINT_DIR, ARCH + '_model_best.pth.tar')
@@ -278,18 +290,20 @@ def loadAndEvaluate():
         splits=['train', 'val', 'test'])
     
     model.eval()
-    logging.debug('Loaded testData with {} testImages and {} images per tensor.'.format(len(testLoader.dataset), BATCH_SIZE))
 
-    classes = getClasses(os.path.join(DATA_PATH, 'val'))
-    pred, grndT = [], []
-    for i, (images, labels) in enumerate(testLoader):
-        logging.debug(f"Evaluating: {i}-th iteration")
-        outputs = model(images)
-        _, predicted = torch.max(outputs, 1)
-        pred = pred + [classes[predicted[k]] for k in range(BATCH_SIZE)]
-        grndT = grndT + [classes[labels[j]] for j in range(BATCH_SIZE)]
-        if i == 1 and IS_DEBUG:
-           break
+    with torch.no_grad():
+        logging.debug(f'Loaded testData with {len(testLoader.dataset)} testImages and {BATCH_SIZE} images per tensor.')
+
+        classes = getClasses(os.path.join(DATA_PATH, 'val'))
+        pred, grndT = [], []
+        for i, (images, labels) in enumerate(testLoader):
+            logging.debug(f"Evaluating: {i}-th iteration")
+            outputs = model(images)
+            _, predicted = torch.max(outputs, 1)
+            pred = pred + [classes[predicted[k]] for k in range(BATCH_SIZE)]
+            grndT = grndT + [classes[labels[j]] for j in range(BATCH_SIZE)]
+            if i == 10 and IS_DEBUG:
+                break
 
     printStats(grndT, pred)
 
