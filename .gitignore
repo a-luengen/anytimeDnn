@@ -1,5 +1,6 @@
 .venv
-data/*
+data/imagenet_images/*
+data/200x1000_class_imagenet_images
 **/*.pyc
 # Byte-compiled / optimized / DLL files
 __pycache__/
