@@ -12,11 +12,13 @@ import shutil
 import logging
 import datetime
 
-from dataloader import get_dataloaders
-from args import arg_parser
-from adaptive_inference import dynamic_evaluate
-import models
-from op_counter import measure_model
+from msdnet.dataloader import get_dataloaders_alt
+from msdnet.args import arg_parser
+from msdnet.adaptive_inference import dynamic_evaluate
+import msdnet.models as models
+from msdnet.op_counter import measure_model
+
+from utils import get_msd_net_model
 
 args = arg_parser.parse_args()
 
@@ -37,7 +39,7 @@ if args.data == 'cifar10':
 elif args.data == 'cifar100':
     args.num_classes = 100
 else:
-    args.num_classes = 1000
+    args.num_classes = 40
 
 import torch
 import torch.nn as nn
@@ -60,21 +62,23 @@ def main():
     else:
         IM_SIZE = 224
 
-    model = getattr(models, args.arch)(args)
-    n_flops, n_params = measure_model(model, IM_SIZE, IM_SIZE)    
-    torch.save(n_flops, os.path.join(args.save, 'flops.pth'))
-    del(model)
+    #model = getattr(models, args.arch)(args)
+    #n_flops, n_params = measure_model(model, IM_SIZE, IM_SIZE)    
+    #torch.save(n_flops, os.path.join(args.save, 'flops.pth'))
+    #del(model)
         
         
-    model = getattr(models, args.arch)(args)
+    model = get_msd_net_model() #getattr(models, args.arch)(args)
 
     if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
         model.features = torch.nn.DataParallel(model.features)
         model.cuda()
-    else:
+    elif torch.cuda.is_available():
         model = torch.nn.DataParallel(model).cuda()
 
-    criterion = nn.CrossEntropyLoss().cuda()
+    criterion = nn.CrossEntropyLoss()
+    if torch.cuda.is_available():
+        criterion = criterion.cuda()
 
     optimizer = torch.optim.SGD(model.parameters(), args.lr,
                                 momentum=args.momentum,
@@ -90,7 +94,7 @@ def main():
 
     cudnn.benchmark = True
 
-    train_loader, val_loader, test_loader = get_dataloaders(args)
+    train_loader, val_loader, test_loader = get_dataloaders_alt(args)
 
     if args.evalmode is not None:
         state_dict = torch.load(args.evaluate_from)['state_dict']
@@ -104,6 +108,9 @@ def main():
 
     scores = ['epoch\tlr\ttrain_loss\tval_loss\ttrain_prec1'
               '\tval_prec1\ttrain_prec5\tval_prec5']
+
+
+    exit(0)
 
     for epoch in range(args.start_epoch, args.epochs):
 
@@ -244,17 +251,14 @@ def validate(val_loader, model, criterion):
             end = time.time()
 
             if i % args.print_freq == 0:
-                logging.info('Epoch: [{0}/{1}]\t'
-                      'Time {batch_time.avg:.3f}\t'
-                      'Data {data_time.avg:.3f}\t'
-                      'Loss {loss.val:.4f}\t'
-                      'Acc@1 {top1.val:.4f}\t'
-                      'Acc@5 {top5.val:.4f}'.format(
-                        i + 1, len(val_loader),
-                        batch_time=batch_time, data_time=data_time,
-                        loss=losses, top1=top1[-1], top5=top5[-1]))
+                logging.info(f'Epoch: [{i+1}/{len(val_loader)}]\t'
+                      f'Time {batch_time.avg:.3f}\t'
+                      f'Data {data_time.avg:.3f}\t'
+                      f'Loss {losses.val:.4f}\t'
+                      f'Acc@1 {top1[-1].val:.4f}\t'
+                      f'Acc@5 {top5[-1].val:.4f}')
     for j in range(args.nBlocks):
-        logging.info(' * prec@1 {top1.avg:.3f} prec@5 {top5.avg:.3f}'.format(top1=top1[j], top5=top5[j]))
+        logging.info(f' * prec@1 {top1[j].avg:.3f} prec@5 {top5[j].avg:.3f}')
     # logging.info(' * prec@1 {top1.avg:.3f} prec@5 {top5.avg:.3f}'.format(top1=top1[-1], top5=top5[-1]))
     return losses.avg, top1[-1].avg, top5[-1].avg
 

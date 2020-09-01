@@ -208,7 +208,7 @@ class MSDNet(nn.Module):
         self.steps = [args.base]
         self.args = args
         
-        NUMBER_OF_CLASSES = 200 # Default 1000
+        NUMBER_OF_CLASSES = 40 #200 # Default 1000
 
         n_layers_all, n_layer_curr = args.base, 0
         for i in range(1, self.nBlocks):

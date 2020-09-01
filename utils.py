@@ -11,7 +11,7 @@ def get_msd_net_model():
     bnFact = '1-2-4-4'
     obj = argparse.Namespace()
     obj.nBlocks = 1
-    obj.nChannels = 32
+    obj.nChannels = 224 # For CIFAR 32
     obj.base = 4
     obj.stepmode = 'even'
     obj.step = 4
@@ -21,9 +21,9 @@ def get_msd_net_model():
     obj.bnFactor = list(map(int, bnFact.split('-')))
     obj.bottleneck = True
     obj.data = 'ImageNet'
-    obj.nScales = len(obj.grFactor)
+    obj.nScales = len(obj.grFactor) # 4 Scales
     obj.reduction = 0.5 # compression of densenet
-    return MSDNet(obj).train()
+    return MSDNet(obj)
 
 def save_checkpoint(state, is_best: bool, arch: str, checkpoint_dir: str, filename=None):
     
