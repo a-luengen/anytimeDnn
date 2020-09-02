@@ -42,6 +42,7 @@ class BottleneckBlock(nn.Module):
 class TransitionBlock(nn.Module):
     def __init__(self, in_planes, out_planes, dropRate=0.0):
         super(TransitionBlock, self).__init__()
+        print("Transition Block input planes: ", in_planes)
         self.bn1 = nn.BatchNorm2d(in_planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv1 = nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=1,
@@ -115,5 +116,85 @@ class DenseNet3(nn.Module):
         out = self.block3(out)
         out = self.relu(self.bn1(out))
         out = F.avg_pool2d(out, 8)
+        out = out.view(-1, self.in_planes)
+        return self.fc(out)
+
+    """
+        DenseNet for Imagenet classification
+        aka. DenseNet-BC configuration
+    """
+class DenseNet4(nn.Module):
+    def __init__(self, block_config, num_classes, growth_rate=12,
+                 reduction=0.5, bottleneck=True, drop_rate=0.0):
+        super(DenseNet4, self).__init__()
+
+        in_planes = int(2 * growth_rate)
+
+        if bottleneck is True:
+            block = BottleneckBlock
+        else:
+            block = BasicBlock
+
+        # 1st conv before any dense block
+        self.input_conv = nn.Sequential(
+            nn.Conv2d(3, in_planes, kernel_size=7, stride=2, padding=3, bias=False),
+            nn.BatchNorm2d(in_planes),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+        )
+
+        # 1st dense Block
+        self.block1 = DenseBlock(block_config[0], in_planes, growth_rate, block, dropRate=drop_rate)
+        
+        in_planes = math.floor(in_planes + block_config[0] * growth_rate)
+        out_planes = math.floor(in_planes * reduction)
+        
+        # 1st transition layer
+        self.trans1 = TransitionBlock(
+            in_planes, 
+            out_planes, 
+            dropRate=drop_rate)
+
+        in_planes = out_planes
+
+        # 2nd dense Block
+        self.block2 = DenseBlock(block_config[1], in_planes, growth_rate, block, dropRate=drop_rate)
+        in_planes = int(in_planes + block_config[1] * growth_rate)
+        out_planes = math.floor(in_planes * reduction)
+        
+        # 2nd transition layer
+        self.trans2 = TransitionBlock(in_planes, out_planes, dropRate=drop_rate)
+        in_planes = out_planes
+        
+        # 3rd dense Block
+        self.block3 = DenseBlock(block_config[2], in_planes, growth_rate, block, dropRate=drop_rate)
+        in_planes = int(in_planes + block_config[2] * growth_rate)
+        out_planes = math.floor(in_planes * reduction)
+        
+        # 3rd transition layer
+        self.trans3 = TransitionBlock(in_planes, out_planes, dropRate=drop_rate)
+        in_planes = out_planes
+
+        # 4th dense Block
+        self.block4 = DenseBlock(block_config[3], in_planes, growth_rate, block, dropRate=drop_rate)
+        in_planes = int(in_planes + block_config[3] * growth_rate)
+
+        self.in_planes = in_planes
+
+        # final classification layer
+        self.prep_class = nn.Sequential(
+            nn.BatchNorm2d(in_planes),
+            nn.MaxPool2d(2, 2)
+        )
+        self.fc = nn.Linear(in_planes, num_classes)
+
+    def forward(self, x):
+        #out = self.conv1(x)
+        out = self.input_conv(x)
+        out = self.trans1(self.block1(out))
+        out = self.trans2(self.block2(out))
+        out = self.trans3(self.block3(out))
+        out = self.block4(out)
+        out = self.prep_class(out)
         out = out.view(-1, self.in_planes)
         return self.fc(out)
