@@ -119,11 +119,11 @@ class DenseNet3(nn.Module):
         out = out.view(-1, self.in_planes)
         return self.fc(out)
 
+class DenseNet4(nn.Module):
     """
         DenseNet for Imagenet classification
         aka. DenseNet-BC configuration
     """
-class DenseNet4(nn.Module):
     def __init__(self, block_config, num_classes, growth_rate=12,
                  reduction=0.5, bottleneck=True, drop_rate=0.0):
         super(DenseNet4, self).__init__()

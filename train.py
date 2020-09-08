@@ -49,7 +49,7 @@ def main(argv):
     logging.info(f"Found {n_gpus_per_node} GPU(-s)")
 
     # create model 
-    model = getModel()
+    model = getModel(ARCH)
     
     logging.info(f"Training Arch:{ARCH}")
 
@@ -123,21 +123,6 @@ def main(argv):
         
         if IS_DEBUG:
             break
-
-def getModel():
-    model = None
-    logging.info(f"Loading model: {ARCH}")
-    if ARCH == 'resnet50':
-        model = ResNet.resnet50()
-    elif ARCH == 'resnet101':
-        model = ResNet.resnet101()
-    elif ARCH == 'resnet152':
-        model = ResNet.resnet152()
-    elif ARCH == 'densenet':
-        model = dn.DenseNet3(3, 40)
-    else:
-        model = ResNet.resnet50()
-    return model
 
 def accuracy(output, target, topk=(1,)):
     """Computes accuracy over the k top predictions for the values of k"""
