@@ -5,6 +5,8 @@ import logging
 import torch
 from sklearn import metrics
 from msdnet.models.msdnet import MSDNet
+from resnet import ResNet
+import densenet.densenet as dn
 
 def get_msd_net_model():
     grFact = '1-2-4-4'
@@ -91,3 +93,22 @@ def getClasses(data_path: str):
     logging.debug(class_list)
     logging.debug(len(class_list))
     return class_list
+
+def getModel(arch: str):
+    logging.info(f"Loading model: {arch}")
+    model = None
+    if arch == 'resnet50':
+        model = ResNet.resnet50()
+    elif arch == 'resnet101':
+        model = ResNet.resnet101()
+    elif arch == 'resnet152':
+        model = ResNet.resnet152()
+    elif arch == 'densenet':
+        model = dn.DenseNet3(3, 40)
+    elif arch == 'densenet121':
+        model = dn.DenseNet4([6, 12, 24, 16], 40, growth_rate=32)
+    elif arch == 'msdnet':
+        model = get_msd_net_model()
+    else:
+        model = ResNet.resnet50()
+    return model
