@@ -26,8 +26,8 @@ IS_DEBUG = False
 DATA_PATH = "data/imagenet_images"
 # for colab:
 # DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
-BATCH_SIZE = 1#8
-NUM_WORKERS = 1#4
+BATCH_SIZE = 8
+NUM_WORKERS = 4
 
 STAT_FREQUENCY = 1
 LEARNING_RATE = 0.1
@@ -38,7 +38,7 @@ START_EPOCH = 0
 EPOCHS = 90
 CHECKPOINT_INTERVALL = 30
 CHECKPOINT_DIR = 'checkpoints'
-ARCH = 'resnet50'
+ARCH = 'resnet101'
 
 ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet', 'msdnet']
 
