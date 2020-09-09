@@ -112,7 +112,7 @@ def main(argv):
         best_acc = max(acc, best_acc)
         
         # safe model
-        if epoch % CHECKPOINT_INTERVALL == 0 or is_best:
+        if epoch % CHECKPOINT_INTERVALL == 0 or is_best or IS_DEBUG:
             save_checkpoint(
                 getStateDict(
                     model, epoch, 
@@ -120,8 +120,6 @@ def main(argv):
                     optimizer), 
                 is_best, ARCH, CHECKPOINT_DIR)
         
-        
-
         if IS_DEBUG:
             break
 
@@ -245,7 +243,7 @@ def validate(val_loader, model, criterion):
     return top1.avg
 
 def loadAndEvaluate():
-    model = getModel()
+    model = getModel(ARCH)
 
     if os.path.exists(os.path.join(CHECKPOINT_DIR, ARCH + '_model_best.pth.tar')):
         logging.debug("Loading best model")
