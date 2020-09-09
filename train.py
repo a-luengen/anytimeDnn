@@ -113,14 +113,15 @@ def main(argv):
         
         # safe model
         if epoch % CHECKPOINT_INTERVALL == 0 or is_best:
-            save_checkpoint({
-                'epoch': epoch + 1,
-                'arch': ARCH,
-                'state_dict': model.state_dict(),
-                'best_acc': best_acc,
-                'optimizer': optimizer.state_dict(),
-            }, is_best, ARCH, CHECKPOINT_DIR)
+            save_checkpoint(
+                getStateDict(
+                    model, epoch, 
+                    ARCH, best_acc, 
+                    optimizer), 
+                is_best, ARCH, CHECKPOINT_DIR)
         
+        
+
         if IS_DEBUG:
             break
 

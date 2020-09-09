@@ -28,7 +28,6 @@ def get_msd_net_model():
     return MSDNet(obj)
 
 def save_checkpoint(state, is_best: bool, arch: str, checkpoint_dir: str, filename=None):
-    
     if filename is None:
         filename = state["arch"] + '_checkpoint.pth.tar'
 
@@ -43,9 +42,11 @@ def save_checkpoint(state, is_best: bool, arch: str, checkpoint_dir: str, filena
         os.remove(target)
     shutil.move(filename, os.path.basename(checkpoint_dir))
 
-
     if is_best:
-        shutil.copyfile(filename, os.path.join(checkpoint_dir, state["arch"] + '_model_best.pth.tar'))
+        best_filename = state["arch"] + '_model_best.pth.tar'
+        best_filePath = os.path.join(checkpoint_dir, best_filename)
+        source = os.path.join(checkpoint_dir, filename)
+        shutil.copyfile(source, best_filePath)
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
@@ -112,3 +113,12 @@ def getModel(arch: str):
     else:
         model = ResNet.resnet50()
     return model
+
+def getStateDict(model, epoch : int, arch : str, best_acc: float, optimizer):
+    return {
+        'epoch': epoch + 1,
+        'arch' : arch,
+        'state_dict': model.state_dict(),
+        'best_acc': best_acc,
+        'optimizer': optimizer.state_dict(),
+    }
