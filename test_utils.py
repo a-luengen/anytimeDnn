@@ -1,8 +1,11 @@
 import unittest
 import os
 import shutil
+import random
 import torchvision.models as models
 from utils import *
+
+
 
 class TestUtilFunctions(unittest.TestCase):
 
@@ -31,9 +34,55 @@ class TestUtilFunctions(unittest.TestCase):
         state_dict = getStateDict(self.test_net, 0, self.arch_name, 0.0, self.test_optim)
 
         save_checkpoint(state_dict, False, self.arch_name, self.test_dir)
+
+        self.assertTrue(os.path.exists(os.path.join(self.test_dir, self.arch_name + CHECKPOINT_POSTFIX)))
     
     def test01_testCheckpointFunction_withIsBestTrue_noException(self):
 
         state_dict = getStateDict(self.test_net, 0, self.arch_name, 0.0, self.test_optim)
 
         save_checkpoint(state_dict, True, self.arch_name, self.test_dir)
+
+        self.assertTrue(os.path.exists(os.path.join(self.test_dir, self.arch_name + CHECKPOINT_BEST_POSTFIX)))
+    
+    def test02_getStateDict_CorrectParametersSet(self):
+        test_acc = random.random()
+        test_epoch = random.randint(0, 100)
+
+        state_dict = getStateDict(self.test_net, test_epoch, self.arch_name, test_acc, self.test_optim)
+
+        self.assertEqual(state_dict['epoch'], test_epoch)
+        self.assertEqual(state_dict['arch'], self.arch_name)
+        self.assertEqual(state_dict['best_acc'], test_acc)
+
+    def test03_testResumeCheckpointFunction_returnsCorrectParameters(self):
+        is_best = False
+        test_acc = 1.2
+        test_epoch = 5
+
+        state_dict = getStateDict(self.test_net, test_epoch, self.arch_name, test_acc, self.test_optim)
+
+        save_checkpoint(state_dict, is_best, self.arch_name, self.test_dir)
+
+        self.test_net, epoch, best_prec = resumeFromPath(
+            os.path.join(self.test_dir, self.arch_name + CHECKPOINT_POSTFIX), 
+            self.test_net)
+
+        self.assertEqual(epoch, test_epoch)
+        self.assertEqual(best_prec, test_acc)
+    
+    def test04_testResumeCheckpointFunction_WithBest_returnsCorrectParameters(self):
+        is_best = True
+        test_acc = 1.2
+        test_epoch = 5
+
+        state_dict = getStateDict(self.test_net, test_epoch, self.arch_name, test_acc, self.test_optim)
+
+        save_checkpoint(state_dict, is_best, self.arch_name, self.test_dir)
+
+        self.test_net, epoch, best_prec = resumeFromPath(
+            os.path.join(self.test_dir, self.arch_name + CHECKPOINT_BEST_POSTFIX), 
+            self.test_net)
+
+        self.assertEqual(epoch, test_epoch)
+        self.assertEqual(best_prec, test_acc)
