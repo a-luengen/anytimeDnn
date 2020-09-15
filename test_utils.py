@@ -5,8 +5,6 @@ import random
 import torchvision.models as models
 from utils import *
 
-
-
 class TestUtilFunctions(unittest.TestCase):
 
     test_dir = os.path.join(os.getcwd(), 'test_checkpoints')
@@ -54,6 +52,8 @@ class TestUtilFunctions(unittest.TestCase):
         self.assertEqual(state_dict['epoch'], test_epoch)
         self.assertEqual(state_dict['arch'], self.arch_name)
         self.assertEqual(state_dict['best_acc'], test_acc)
+        self.assertIsNotNone(state_dict['optimizer'])
+        self.assertIsNotNone(state_dict['state_dict'])
 
     def test03_testResumeCheckpointFunction_returnsCorrectParameters(self):
         is_best = False
@@ -64,9 +64,10 @@ class TestUtilFunctions(unittest.TestCase):
 
         save_checkpoint(state_dict, is_best, self.arch_name, self.test_dir)
 
-        self.test_net, epoch, best_prec = resumeFromPath(
+        self.test_net, self.optim, epoch, best_prec = resumeFromPath(
             os.path.join(self.test_dir, self.arch_name + CHECKPOINT_POSTFIX), 
-            self.test_net)
+            self.test_net,
+            self.test_optim)
 
         self.assertEqual(epoch, test_epoch)
         self.assertEqual(best_prec, test_acc)
@@ -80,9 +81,10 @@ class TestUtilFunctions(unittest.TestCase):
 
         save_checkpoint(state_dict, is_best, self.arch_name, self.test_dir)
 
-        self.test_net, epoch, best_prec = resumeFromPath(
+        self.test_net, self.test_optim, epoch, best_prec = resumeFromPath(
             os.path.join(self.test_dir, self.arch_name + CHECKPOINT_BEST_POSTFIX), 
-            self.test_net)
+            self.test_net,
+            self.test_optim)
 
         self.assertEqual(epoch, test_epoch)
         self.assertEqual(best_prec, test_acc)

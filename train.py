@@ -2,13 +2,10 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.backends.cudnn as cudnn
-#from data.ImagenetDataset import get_imagenet_datasets
 
 from msdnet.dataloader import get_dataloaders_alt
 from resnet import ResNet
 import densenet.densenet as dn
-#from densenet import *
-#from msdnet.models.msdnet import MSDNet
 
 import os
 import shutil
@@ -18,18 +15,11 @@ import sys
 import logging
 
 from utils import *
-#from utils import get_msd_net_model, save_checkpoint, AverageMeter, get_batch_size_stats
 
 IS_DEBUG = False
+DEBUG_ITERATIONS = 40
 
-# for repo:
-DATA_PATH = "data/imagenet_images"
-# for colab:
-# DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
-BATCH_SIZE = 8
-NUM_WORKERS = 4
-
-STAT_FREQUENCY = 1
+STAT_FREQUENCY = 200
 LEARNING_RATE = 0.1
 MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-4
@@ -40,7 +30,16 @@ CHECKPOINT_INTERVALL = 30
 CHECKPOINT_DIR = 'checkpoints'
 ARCH = 'resnet101'
 
-ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet', 'msdnet']
+ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169', 'msdnet']
+
+# for repo:
+DATA_PATH = "data/imagenet_images"
+# for colab:
+# DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
+BATCH_SIZE = 4
+NUM_WORKERS = 4
+RESUME = True
+
 
 def main(argv):
     torch.cuda.empty_cache()
@@ -50,7 +49,7 @@ def main(argv):
 
     # create model 
     model = getModel(ARCH)
-    
+
     logging.info(f"Training Arch:{ARCH}")
 
     if not torch.cuda.is_available():
@@ -64,6 +63,8 @@ def main(argv):
         model.cuda(GPU_ID)
       else:
         logging.info("Using all available GPUs")
+        for i in range(torch.cuda.device_count()):
+            logging.info(f"gpu:{i} - {torch.cuda.get_device_name(i)}")
         model = nn.DataParallel(model).cuda()
     
     # loss function (criterion) and optimizer
@@ -94,8 +95,15 @@ def main(argv):
     logging.debug(get_batch_size_stats(train_loader))
     
 
+    if RESUME:
+        model, optimizer, START_EPOCH, best_acc  = resumeFromPath(os.path.join(os.getcwd(), CHECKPOINT_DIR, ARCH + CHECKPOINT_POSTFIX), model, optimizer)
+    else:
+        best_acc = 0.0
+    
+    checkpoint_time = AverageMeter('Checkpoint Time', ':6.3f')
+    epoch_time = AverageMeter('Epoch Time', ':6.3f')
     # train loop
-    best_acc = 0.0
+    end = time.time()
     for epoch in range(START_EPOCH, EPOCHS):
         adjust_learning_rate(optimizer, epoch)
         
@@ -113,15 +121,21 @@ def main(argv):
         
         # safe model
         if epoch % CHECKPOINT_INTERVALL == 0 or is_best or IS_DEBUG:
+            start = time.time()
             save_checkpoint(
                 getStateDict(
                     model, epoch, 
                     ARCH, best_acc, 
                     optimizer), 
                 is_best, ARCH, CHECKPOINT_DIR)
-        
+            checkpoint_time.update(time.time() - start)
+            logging.info(checkpoint_time)
         if IS_DEBUG:
             break
+        epoch_time.update(time.time() - end)
+        end = time.time()
+        logging.info(epoch_time)
+    logging.info(f"Best accuracy: {best_acc}")
 
 def accuracy(output, target, topk=(1,)):
     """Computes accuracy over the k top predictions for the values of k"""
@@ -158,23 +172,23 @@ def train(train_loader, model, criterion, optimizer, epoch):
     top5 = AverageMeter('Acc@5', ':6.2f')
 
     end = time.time()
-    for i, (input, target) in enumerate(train_loader):
+    for i, (img, target) in enumerate(train_loader):
         
         if GPU_ID is not None:
-            input = input.cuda(GPU_ID, non_blocking=True)
+            img = img.cuda(GPU_ID, non_blocking=True)
         if torch.cuda.is_available():
             target = target.cuda(GPU_ID, non_blocking=True)
         # time it takes to load data
         data_load_time.update(time.time() - end)
         
         # compute output of the current network
-        output = model(input)
+        output = model(img)
         loss = criterion(output, target)
 
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
         
-        top1.update(acc1[0], input.size(0))
-        top5.update(acc5[0], input.size(0))
+        top1.update(acc1[0], img.size(0))
+        top5.update(acc5[0], img.size(0))
 
         optimizer.zero_grad()
         loss.backward()
@@ -194,8 +208,8 @@ def train(train_loader, model, criterion, optimizer, epoch):
             logging.info(top5)
             logging.info(batch_time)
             logging.info(data_load_time)
-            if IS_DEBUG:
-                return
+        if IS_DEBUG and i == DEBUG_ITERATIONS:
+                break
 
 def validate(val_loader, model, criterion):
     """Compute average accuracy, top 1 and top 5 accuracy"""
@@ -208,29 +222,28 @@ def validate(val_loader, model, criterion):
 
     with torch.no_grad():
         end = time.time()
-        for i , (input, target) in enumerate(val_loader):
+        for i , (img, target) in enumerate(val_loader):
             # check if could be moved to cuda device
             if GPU_ID is not None:
-                input = input.cuda(GPU_ID, non_blocking=True)
+                img = img.cuda(GPU_ID, non_blocking=True)
             if torch.cuda.is_available():
                 target = target.cuda(GPU_ID, non_blocking=True)
                 
             # compute output
-            output = model(input)
+            output = model(img)
             
             # compute loss
             loss = criterion(output, target)
             
             # measure accuracy and record loss
             prec1, prec5 = accuracy(output, target, topk=(1, 5))
-            losses.update(loss.item(),input.size(0))
-            top1.update(prec1.item(), input.size(0))
-            top5.update(prec5.item(), input.size(0))
+            losses.update(loss.item(),img.size(0))
+            top1.update(prec1.item(), img.size(0))
+            top5.update(prec5.item(), img.size(0))
 
             # measure elapsed time
             batch_time.update(time.time() - end)
 
-            return top1.avg
 
             if i % STAT_FREQUENCY == STAT_FREQUENCY - 1:
                 logging.info(f'validation loop {i} of {len(val_loader)}')
@@ -238,8 +251,8 @@ def validate(val_loader, model, criterion):
                 logging.info(top1)
                 logging.info(top5)
                 logging.info(batch_time)
-                if IS_DEBUG:
-                    return top1.avg
+            if IS_DEBUG and i == DEBUG_ITERATIONS:
+                return top1.avg
     return top1.avg
 
 def loadAndEvaluate():
@@ -254,13 +267,7 @@ def loadAndEvaluate():
     
     logging.debug('Loading: ' + load_path)
 
-    device = torch.device('cpu')
-    if torch.cuda.is_available():
-        device = torch.device("cuda")
-        logging.debug("Loading directly to device")
-    checkpoint = torch.load(load_path, map_location=device)
-    model.load_state_dict(checkpoint["state_dict"])
-    model.to(device)
+    model, _, _ = resumeFromPath(load_path, model)
 
     logging.debug('Loading Test Data..')
 
@@ -276,7 +283,7 @@ def loadAndEvaluate():
     model.eval()
 
     with torch.no_grad():
-        logging.debug(f'Loaded testData with {len(testLoader.dataset)} testImages and {BATCH_SIZE} images per tensor.')
+        logging.debug(f'Loaded testData with {len(testLoader.dataset)} testImages and {BATCH_SIZE} images per batch.')
 
         classes = getClasses(os.path.join(DATA_PATH, 'val'))
         pred, grndT = [], []
@@ -286,7 +293,8 @@ def loadAndEvaluate():
             _, predicted = torch.max(outputs, 1)
             pred = pred + [classes[predicted[k]] for k in range(BATCH_SIZE)]
             grndT = grndT + [classes[labels[j]] for j in range(BATCH_SIZE)]
-            if i == 10 and IS_DEBUG:
+            
+            if IS_DEBUG and i == DEBUG_ITERATIONS:
                 break
 
     printStats(grndT, pred)
@@ -300,4 +308,4 @@ if __name__ == "__main__":
 
     logging.basicConfig(filename=str(curTime) + ".log", level=log_level)
     main(sys.argv)
-    loadAndEvaluate()
+    logging.info(f"Top1 Accuracy: {loadAndEvaluate()}")

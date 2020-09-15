@@ -134,7 +134,7 @@ def save_checkpoint(state, is_best: bool, arch: str, checkpoint_dir: str, filena
         source = os.path.join(checkpoint_dir, filename)
         shutil.copyfile(source, best_filePath)
 
-def resumeFromPath(path : str, model):
+def resumeFromPath(path : str, model, optimizer):
     start_epoch = 0
     best_prec1 = 0.0
 
@@ -159,8 +159,10 @@ def resumeFromPath(path : str, model):
     
     model.load_state_dict(checkpoint['state_dict'])
     
+    optimizer.load_state_dict(checkpoint['optimizer'])
+
     start_epoch = checkpoint['epoch']
     best_prec1 = checkpoint['best_acc']
     logging.info(f"=> loaded checkpoint '{path}' (epoch {checkpoint['epoch']})")
 
-    return model, start_epoch, best_prec1
+    return model, optimizer, start_epoch, best_prec1
