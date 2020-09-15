@@ -3,16 +3,31 @@ import torch.nn as nn
 from resnet.BottleNeck import BottleNeck
 from resnet.BasicBlock import BasicBlock
 #from resnet.OCL_Convolution import OCL_Convolution
+import logging
+
+class ResnetDropResidualPolicy(object):
+    def __init__(self):
+        self.dropCount = 0
+    
+    def apply(self, residual_func, shortcut_func, x):
+        self.dropCount += 1
+        logging.info(f"Called on {self.dropCount}-Layer")
+        #return residual_func(x) + shortcut_func(x)
+        return shortcut_func(x)
 
 class ResNet(nn.Module):
     """
         Modified ResNet class to use the Convolution implementation in OpenCL
     """
 
-    def __init__(self, block, num_block, num_classes=40, use_ocl=False):
+    def __init__(self, block, num_block, num_classes=40, use_policy=False):
         super().__init__()
-        self.use_ocl = use_ocl
         self.in_channels = 64
+
+        if use_policy: 
+            self.dropPolicy = ResnetDropResidualPolicy()
+        else:
+            self.dropPolicy = None
 
         self.conv1 = nn.Sequential(
             nn.Conv2d(3, self.in_channels, kernel_size=3, padding=1, bias=False),
@@ -51,7 +66,7 @@ class ResNet(nn.Module):
         layers = []
         for stride in strides:
             #layers.append(block(self.in_channels, out_channels, stride, use_ocl=self.use_ocl))
-            layers.append(block(self.in_channels, out_channels, stride))
+            layers.append(block(self.in_channels, out_channels, stride, dropResidualPolicy=self.dropPolicy))
             self.in_channels = out_channels * block.expansion
         
         return nn.Sequential(*layers)
@@ -80,10 +95,10 @@ def resnet34():
     """
     return ResNet(BasicBlock, [3, 4, 6, 3])
 
-def resnet50(use_ocl=False):
-    """ return a ResNet 50 object
+def resnet50(use_policy=False):
+    """ return a ResNet 50 object with opencl supported inferencing
     """
-    return ResNet(BottleNeck, [3, 4, 6, 3], use_ocl=use_ocl)
+    return ResNet(BottleNeck, [3, 4, 6, 3], use_policy)
 
 def resnet101():
     """ return a ResNet 101 object

@@ -1,15 +1,23 @@
 import torch.nn as nn
 #from resnet.OCL_Convolution import OCL_Convolution
 
+import logging
+
+class CustIdent(nn.Identity):
+    def forward(self, x):
+        logging.info("Forward was called")
+        return x
+
 class BottleNeck(nn.Module):
     """Residual block for resnet over 50 layers
     """
+    dropPolicy = None
     expansion = 4
-    def __init__(self, in_channels, out_channels, stride=1, use_ocl=False):
+    def __init__(self, in_channels, out_channels, stride=1, use_ocl=False, dropResidualPolicy=None):
         super().__init__()
         
+        if dropResidualPolicy is not None: self.dropPolicy = dropResidualPolicy
         # defining pipeline for residual calculation
-        
         self.residual_function = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
             #OCL_Convolution(in_channels, out_channels, kernel_size=1, bias=False, use_ocl=use_ocl),
@@ -33,5 +41,7 @@ class BottleNeck(nn.Module):
             )
         
     def forward(self, x):
+        if self.dropPolicy:
+            return nn.ReLU(inplace=True)(self.dropPolicy.apply(self.residual_function, self.shortcut, x))
         return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
     

@@ -6,8 +6,6 @@ import datetime
 import sys
 import logging
 
-
-
 from msdnet.dataloader import get_dataloaders_alt
 from resnet import ResNet
 import densenet.densenet as dn
@@ -40,14 +38,10 @@ if __name__ == '__main__':
     
     logging.basicConfig(level=logging.DEBUG)
     
-    architectures = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'msdnet']
-
+    #architectures = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'msdnet']
+    architectures = ['resnet50', 'resnet50-pol']
     imagenet_test = torch.rand((1, 3, 224 ,224))
 
     # run benchmark loop
     for i, arch in enumerate(architectures):
         runBenchForModel(arch)
-
-
-
-
