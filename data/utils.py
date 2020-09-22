@@ -19,6 +19,9 @@ from PIL import Image
 def processImagesByRatio(ratio: int, src_path : str, tar_path : str, set_type : str):
     src_path = os.path.join(src_path, set_type)
 
+    if not os.path.exists(tar_path):
+        os.mkdir(tar_path)
+
     # index-class mapping file
     filename = "index-" + set_type + ".txt"
     fileHandle = open(os.path.join(tar_path, filename), 'w')
@@ -36,7 +39,11 @@ def processImagesByRatio(ratio: int, src_path : str, tar_path : str, set_type : 
         os.mkdir(tar_path)
 
     val_cl_src_paths = []
-    classes = os.listdir(src_path)
+
+    def isFolder(fn:str)->bool:
+        return not '.jpg' in fn
+
+    classes = list(filter(isFolder, os.listdir(src_path)))
     for val_class in classes:
         val_cl_src_paths.append(os.path.join(src_path, val_class))
     
@@ -117,7 +124,10 @@ def transformAllImages(path: str, set_type: str) -> None:
     else:
         return
 
-    img_name_list = os.listdir(path)
+    def isImg(fn:str)->bool:
+        return '.jpg' in fn.casefold()
+
+    img_name_list = list(filter(isImg, os.listdir(path)))
 
     for img_name in img_name_list:
         img_path = os.path.join(path, img_name)
@@ -138,7 +148,7 @@ def generateDatasetZipArchive(base_path: str, files_path: str, prefix: str, set_
         for filename in filenames:
             zipArch.write(os.path.join(files_path, filename), arcname=filename)
 
-def generateNewImageDataset(from_base: str, to_base: str, set_type: str) -> None:
+def generateNewImageDataset(from_base: str, to_base: str, set_type: str, ratio=1/8) -> None:
     
     if not (set_type == 'val' or set_type == 'train'):
         raise Exception(f'{set_type} is not supported')
@@ -150,7 +160,6 @@ def generateNewImageDataset(from_base: str, to_base: str, set_type: str) -> None
         shutil.rmtree(target_path)
         os.remove(os.path.join(to_base, f"index-{set_type}.txt"))
     
-    ratio = 1/8
     processImagesByRatio(ratio, from_base, to_base, set_type)
     transformAllImages(os.path.join(to_base, set_type), set_type)
     generateDatasetZipArchive(to_base, os.path.join(to_base, set_type), 'index-', set_type)
