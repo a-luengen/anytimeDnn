@@ -2,6 +2,7 @@ attrs==19.3.0
 backcall==0.2.0
 bleach==3.1.5
 cycler==0.10.0
+dareblopy==0.0.3
 decorator==4.4.2
 defusedxml==0.6.0
 entrypoints==0.3
@@ -46,6 +47,7 @@ six==1.15.0
 tensorboard-logger==0.1.0
 terminado==0.8.3
 testpath==0.4.4
+threadpoolctl==2.1.0
 tifffile==2020.7.4
 torch==1.5.1
 torchsummary==1.5.1
