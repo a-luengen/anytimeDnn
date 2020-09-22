@@ -137,7 +137,7 @@ def main(argv):
                     model, epoch, 
                     ARCH, best_acc, 
                     optimizer), 
-                is_best, ARCH, CHECKPOINT_DIR)
+                is_best, ARCH, os.path.join(os.getcwd(), CHECKPOINT_DIR))
             checkpoint_time.update(time.time() - start)
             logging.info(checkpoint_time)
         if IS_DEBUG:

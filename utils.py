@@ -124,19 +124,18 @@ def save_checkpoint(state, is_best: bool, arch: str, checkpoint_dir: str, filena
     if not os.path.isdir(checkpoint_dir):
         os.mkdir(checkpoint_dir)
     
-    torch.save(state, filename)
-    logging.debug(os.path.join(checkpoint_dir, filename))
+    target = os.path.join(checkpoint_dir, filename)
 
-    target = os.path.join(os.path.basename(checkpoint_dir), filename)
     if os.path.exists(target):
         os.remove(target)
-    shutil.move(filename, os.path.basename(checkpoint_dir))
+
+    torch.save(state, target)
+    logging.debug(target)
 
     if is_best:
         best_filename = state["arch"] + CHECKPOINT_BEST_POSTFIX
         best_filePath = os.path.join(checkpoint_dir, best_filename)
-        source = os.path.join(checkpoint_dir, filename)
-        shutil.copyfile(source, best_filePath)
+        shutil.copyfile(target, best_filePath)
 
 def resumeFromPath(path : str, model, optimizer):
     start_epoch = 0
