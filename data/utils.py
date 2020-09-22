@@ -114,7 +114,7 @@ def transformValImage(img: Image) -> Image:
 def transformAllImages(path: str, set_type: str) -> None:
 
     if path is None or not os.path.isdir(path):
-        raise Exception
+        raise Exception(f"No path available for source: {path}")
     
     if set_type == "val":
         transform = transformValImage
@@ -134,7 +134,13 @@ def transformAllImages(path: str, set_type: str) -> None:
         with Image.open(img_path) as img:
             if img.mode == 'L':
                 img = transforms.Grayscale(num_output_channels=3)(img)
-            img = transform(img)
+            if img.mode == 'CMYK':
+                img = img.convert('RGB')
+            try:
+                img = transform(img)
+            except Exception as e:
+                raise Exception(f"{e}\n{img_name}")
+            
             img = transforms.ToPILImage()(img)
             img.save(img_path)
 
@@ -148,19 +154,20 @@ def generateDatasetZipArchive(base_path: str, files_path: str, prefix: str, set_
         for filename in filenames:
             zipArch.write(os.path.join(files_path, filename), arcname=filename)
 
-def generateNewImageDataset(from_base: str, to_base: str, set_type: str, ratio=1/8) -> None:
+def generateNewImageDataset(from_base: str, to_base: str, set_type: str, ratio=1/8, force_process=True) -> None:
     
     if not (set_type == 'val' or set_type == 'train'):
         raise Exception(f'{set_type} is not supported')
     
     target_path = os.path.join(to_base, set_type)
     # clean up to_path
-    if os.path.isdir(target_path):
+    if force_process and os.path.isdir(target_path):
         print(f"Removing existing directory: {target_path}")
         shutil.rmtree(target_path)
         os.remove(os.path.join(to_base, f"index-{set_type}.txt"))
     
-    processImagesByRatio(ratio, from_base, to_base, set_type)
+    if force_process:
+        processImagesByRatio(ratio, from_base, to_base, set_type)
     transformAllImages(os.path.join(to_base, set_type), set_type)
     generateDatasetZipArchive(to_base, os.path.join(to_base, set_type), 'index-', set_type)
 
