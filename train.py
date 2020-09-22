@@ -7,6 +7,8 @@ from msdnet.dataloader import get_dataloaders_alt
 from resnet import ResNet
 import densenet.densenet as dn
 
+from data.ImagenetDataset import get_zipped_dataloaders
+
 import os
 import shutil
 import time
@@ -25,10 +27,10 @@ MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-4
 GPU_ID = None
 START_EPOCH = 0
-EPOCHS = 90
+EPOCHS = 2#90
 CHECKPOINT_INTERVALL = 30
 CHECKPOINT_DIR = 'checkpoints'
-ARCH = 'resnet101'
+ARCH = 'resnet18'
 
 ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169', 'msdnet']
 
@@ -38,8 +40,7 @@ DATA_PATH = "data/imagenet_images"
 # DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
 BATCH_SIZE = 4
 NUM_WORKERS = 4
-RESUME = True
-
+RESUME = False
 
 def main(argv):
     torch.cuda.empty_cache()
@@ -82,29 +83,38 @@ def main(argv):
     
     cudnn.benchmark = True
 
-    train_loader, test_loader, _ = get_dataloaders_alt(
-        DATA_PATH, 
-        data="ImageNet", 
-        use_valid=True, 
-        save='data/{}-{}'.format(ARCH, datetime.datetime.now().strftime("%Y-%m-%d-%H")),
-        batch_size=BATCH_SIZE, 
-        workers=NUM_WORKERS, 
-        splits=['train', 'val', 'test'])
+
+
+    #train_loader, test_loader, _ = get_dataloaders_alt(
+    #    DATA_PATH, 
+    #    data="ImageNet", 
+    #    use_valid=True, 
+    #    save='data/{}-{}'.format(ARCH, datetime.datetime.now().strftime("%Y-%m-%d-%H")),
+    #    batch_size=BATCH_SIZE, 
+    #    workers=NUM_WORKERS, 
+    #    splits=['train', 'val', 'test'])
     
+    train_loader, test_loader, _ = get_zipped_dataloaders(
+        os.path.join(os.getcwd(), "data", "imagenet_red"), 
+        8, 
+        use_valid=True)
+
+
     # size of batch:
     logging.debug(get_batch_size_stats(train_loader))
     
 
     if RESUME:
-        model, optimizer, START_EPOCH, best_acc  = resumeFromPath(os.path.join(os.getcwd(), CHECKPOINT_DIR, ARCH + CHECKPOINT_POSTFIX), model, optimizer)
+        model, optimizer, start_epoch, best_acc  = resumeFromPath(os.path.join(os.getcwd(), CHECKPOINT_DIR, ARCH + CHECKPOINT_POSTFIX), model, optimizer)
     else:
+        start_epoch = START_EPOCH
         best_acc = 0.0
     
     checkpoint_time = AverageMeter('Checkpoint Time', ':6.3f')
     epoch_time = AverageMeter('Epoch Time', ':6.3f')
     # train loop
     end = time.time()
-    for epoch in range(START_EPOCH, EPOCHS):
+    for epoch in range(start_epoch, EPOCHS):
         adjust_learning_rate(optimizer, epoch)
         
         # train for one epoch
@@ -160,6 +170,8 @@ def adjust_learning_rate(optimizer, epoch):
         Sets learning rate to default value, decayed by division with 10 every 25 epochs and 
         updates the lr in the optimizer.
     """
+    if not epoch % 25 == 0 and epoch > 0:
+        return
     lr = LEARNING_RATE * (0.1 ** (epoch // 25)) 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr

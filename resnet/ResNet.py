@@ -88,12 +88,12 @@ class ResNet(nn.Module):
 def resnet18():
     """ return a ResNet 18 object
     """
-    return ResNet(BasicBlock, [2, 2, 2, 2])
+    return ResNet(BasicBlock, [2, 2, 2, 2], use_policy=False)
 
 def resnet34():
     """ return a ResNet 34 object
     """
-    return ResNet(BasicBlock, [3, 4, 6, 3])
+    return ResNet(BasicBlock, [3, 4, 6, 3], use_policy=False)
 
 def resnet50(use_policy=False):
     """ return a ResNet 50 object with opencl supported inferencing
@@ -103,9 +103,9 @@ def resnet50(use_policy=False):
 def resnet101():
     """ return a ResNet 101 object
     """
-    return ResNet(BottleNeck, [3, 4, 23, 3])
+    return ResNet(BottleNeck, [3, 4, 23, 3], use_policy=False)
 
 def resnet152():
     """ return a ResNet 152 object
     """
-    return ResNet(BottleNeck, [3, 8, 36, 3])
+    return ResNet(BottleNeck, [3, 8, 36, 3], use_policy=False)

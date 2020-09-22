@@ -81,9 +81,13 @@ def getClasses(data_path: str):
 def getModel(arch: str):
     logging.info(f"Loading model: {arch}")
     model = None
-    if arch == 'resnet50':
+    if arch == 'resnet18':
+        model = ResNet.resnet18()
+    elif arch == 'resnet34':
+        model = ResNet.resnet34()
+    elif arch == 'resnet50':
         model = ResNet.resnet50()
-    if arch == 'resnet50-pol':
+    elif arch == 'resnet50-pol':
         model = ResNet.resnet50(use_policy=True)
     elif arch == 'resnet101':
         model = ResNet.resnet101()

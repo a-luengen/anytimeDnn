@@ -16,7 +16,7 @@ class BasicBlock(nn.Module):
     #to distinct
     expansion = 1
 
-    def __init__(self, in_channels, out_channels, stride=1):
+    def __init__(self, in_channels, out_channels, stride=1, dropResidualPolicy=None):
         super().__init__()
 
         #residual function
