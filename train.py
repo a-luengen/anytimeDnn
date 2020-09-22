@@ -30,17 +30,20 @@ START_EPOCH = 0
 EPOCHS = 2#90
 CHECKPOINT_INTERVALL = 30
 CHECKPOINT_DIR = 'checkpoints'
-ARCH = 'resnet18'
+ARCH = 'resnet101'
 
 ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169', 'msdnet']
 
 # for repo:
-DATA_PATH = "data/imagenet_images"
+# raw images
+# DATA_PATH = "data/imagenet_images"
+# zipped preprocessed images
+DATA_PATH = "data/imagenet_full"
 # for colab:
 # DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
 BATCH_SIZE = 4
-NUM_WORKERS = 4
-RESUME = False
+NUM_WORKERS = 1
+RESUME = True
 
 def main(argv):
     torch.cuda.empty_cache()
@@ -96,7 +99,7 @@ def main(argv):
     
     train_loader, test_loader, _ = get_zipped_dataloaders(
         os.path.join(os.getcwd(), "data", "imagenet_red"), 
-        8, 
+        BATCH_SIZE, 
         use_valid=True)
 
 
@@ -283,15 +286,15 @@ def loadAndEvaluate():
 
     logging.debug('Loading Test Data..')
 
-    _, _, testLoader = get_dataloaders_alt(
-        DATA_PATH, 
-        data="ImageNet", 
-        use_valid=True, 
-        save='data/default-{}'.format(datetime.datetime.now()),
-        batch_size=BATCH_SIZE, 
-        workers=NUM_WORKERS, 
-        splits=['train', 'val', 'test'])
-    
+    #_, _, testLoader = get_dataloaders_alt(
+    #    DATA_PATH, 
+    #    data="ImageNet", 
+    #    use_valid=True, 
+    #    save='data/default-{}'.format(datetime.datetime.now()),
+    #    batch_size=BATCH_SIZE, 
+    #    workers=NUM_WORKERS, 
+    #    splits=['train', 'val', 'test'])
+    _, _, testLoader = get_zipped_dataloaders(DATA_PATH, BATCH_SIZE, use_valid=True)
     model.eval()
 
     with torch.no_grad():
