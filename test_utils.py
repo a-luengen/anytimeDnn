@@ -88,3 +88,19 @@ class TestUtilFunctions(unittest.TestCase):
 
         self.assertEqual(epoch, test_epoch)
         self.assertEqual(best_prec, test_acc)
+    
+    def test05_testResumeCheckpointFunction_returnsCorrectParameter_onNoCheckpointFound(self):
+
+        result_net, result_optim, epoch, best_prec = resumeFromPath("resnet_18.pth.tar", self.test_net, self.test_optim)
+
+        self.assertEqual(result_net, self.test_net)
+        self.assertEqual(result_optim, self.test_optim)
+        self.assertEqual(epoch, 0)
+        self.assertEqual(best_prec, 0.0)
+
+    def test06_architectureParameterAmount_SameAsPytorchImpl(self):  
+        testDenseNet = getModel('densenet121')
+        test_count = sum([p.data.nelement() for p in testDenseNet.parameters()])
+        torchDenseNet = torchvision.models.densenet121(num_classes=40)
+        torch_count = sum([p.data.nelement() for p in torchDenseNet.parameters()])
+        self.assertEqual(test_count, torch_count)
