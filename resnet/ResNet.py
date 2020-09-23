@@ -4,16 +4,39 @@ from resnet.BottleNeck import BottleNeck
 from resnet.BasicBlock import BasicBlock
 #from resnet.OCL_Convolution import OCL_Convolution
 import logging
+from random import *
+
 
 class ResnetDropResidualPolicy(object):
     def __init__(self):
         self.dropCount = 0
-    
-    def apply(self, residual_func, shortcut_func, x):
+        self.layerCount = 0
+
+    def shouldDrop(self) -> bool:
         self.dropCount += 1
-        logging.info(f"Called on {self.dropCount}-Layer")
-        #return residual_func(x) + shortcut_func(x)
-        return shortcut_func(x)
+        return True
+
+    def apply(self, residual_func, shortcut_func, x):
+        self.layerCount += 1
+        logging.info(f"Called on {self.layerCount}-Layer")
+        if self.shouldDrop():
+            return shortcut_func(x)
+        else:
+            return residual_func(x) + shortcut_func(x)
+
+class ResnetDropMaxRandomPolicy(ResnetDropResidualPolicy):
+    def __init__(self, max_drop):
+        super(ResnetDropMaxRandomPolicy, self).__init__()
+        self._max = max_drop
+    
+    def shouldDrop(self) -> bool:
+        if self.dropCount < _max:
+            drop = random() >= 0.5
+            if drop:
+                self.dropCount += 1
+            return drop
+        return False
+
 
 class ResNet(nn.Module):
     """
@@ -25,7 +48,7 @@ class ResNet(nn.Module):
         self.in_channels = 64
 
         if use_policy: 
-            self.dropPolicy = ResnetDropResidualPolicy()
+            self.dropPolicy = getDropPolicy()
         else:
             self.dropPolicy = None
 
@@ -85,27 +108,38 @@ class ResNet(nn.Module):
 
 # Functions to generate a model with the needed amount of trainable parameters
 
-def resnet18():
+def resnet18(use_policy=False):
     """ return a ResNet 18 object
     """
-    return ResNet(BasicBlock, [2, 2, 2, 2], use_policy=False)
+    return ResNet(BasicBlock, [2, 2, 2, 2], use_policy=use_policy)
 
-def resnet34():
+def resnet34(use_policy=False):
     """ return a ResNet 34 object
     """
-    return ResNet(BasicBlock, [3, 4, 6, 3], use_policy=False)
+    return ResNet(BasicBlock, [3, 4, 6, 3], use_policy=use_policy)
 
 def resnet50(use_policy=False):
     """ return a ResNet 50 object with opencl supported inferencing
     """
-    return ResNet(BottleNeck, [3, 4, 6, 3], use_policy)
+    return ResNet(BottleNeck, [3, 4, 6, 3], use_policy=use_policy)
 
-def resnet101():
+def resnet101(use_policy=False):
     """ return a ResNet 101 object
     """
-    return ResNet(BottleNeck, [3, 4, 23, 3], use_policy=False)
+    return ResNet(BottleNeck, [3, 4, 23, 3], use_policy=use_policy)
 
-def resnet152():
+def resnet152(use_policy=False):
     """ return a ResNet 152 object
     """
-    return ResNet(BottleNeck, [3, 8, 36, 3], use_policy=False)
+    return ResNet(BottleNeck, [3, 8, 36, 3], use_policy=use_policy)
+
+
+DROP_POLICY = {
+    "policy": None
+}
+
+def setDropPolicy(policy: ResnetDropResidualPolicy) -> None:
+    DROP_POLICY['policy'] = policy
+
+def getDropPolicy() -> ResnetDropResidualPolicy:
+    return DROP_POLICY['policy']
