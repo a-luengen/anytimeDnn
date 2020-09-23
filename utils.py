@@ -3,10 +3,12 @@ import os
 import shutil
 import logging
 import torch
+import torchvision.models
 from sklearn import metrics
 from msdnet.models.msdnet import MSDNet
 from resnet import ResNet
 import densenet.densenet as dn
+import densenet.torchDensenet as tdn
 
 def get_msd_net_model():
     grFact = '1-2-4-4'
@@ -96,9 +98,11 @@ def getModel(arch: str):
     elif arch == 'densenet':
         model = dn.DenseNet3(3, 40)
     elif arch == 'densenet121':
-        model = dn.DenseNet4([6, 12, 24, 16], 40, growth_rate=32)
+        #model = dn.DenseNet4([6, 12, 24, 16], 40, growth_rate=32)
+        model = tdn.densenet121(num_classes=40)
     elif arch == 'densenet169':
-        model = dn.DenseNet4([6, 12, 32, 32], 40, growth_rate=32)
+        #model = dn.DenseNet4([6, 12, 32, 32], 40, growth_rate=32)
+        model = tdn.densenet169(num_classes=40)
     elif arch == 'msdnet':
         model = get_msd_net_model()
     else:
@@ -144,7 +148,7 @@ def resumeFromPath(path : str, model, optimizer):
     if not os.path.isfile(path):
         print(f'No file found {path}')
         logging.info(f"=> no checkpoint found at '{path}'")
-        return model, start_epoch, best_prec1
+        return model, optimizer, start_epoch, best_prec1
 
     logging.debug(f"=> loading checkpoint {path}")
     
