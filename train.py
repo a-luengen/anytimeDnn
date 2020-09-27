@@ -32,7 +32,7 @@ CHECKPOINT_INTERVALL = 4
 CHECKPOINT_DIR = 'checkpoints'
 ARCH = 'resnet101'
 
-ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169', 'msdnet']
+ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169']
 
 # for repo:
 # raw images
