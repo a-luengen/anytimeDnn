@@ -101,10 +101,12 @@ def main(argv):
     # size of batch:
     logging.debug(get_batch_size_stats(train_loader))
     
-
     if RESUME:
         model, optimizer, start_epoch, best_acc  = resumeFromPath(
-            os.path.join(os.getcwd(), CHECKPOINT_DIR, ARCH + f"_{LAST_CHECKPOINT_EPOCH}_" + CHECKPOINT_POSTFIX), 
+            os.path.join(
+                os.getcwd(), 
+                CHECKPOINT_DIR, 
+                f"{ARCH}_{LAST_CHECKPOINT_EPOCH}_{CHECKPOINT_POSTFIX}"), 
             model, 
             optimizer)
     else:
