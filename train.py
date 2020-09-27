@@ -106,7 +106,7 @@ def main(argv):
             os.path.join(
                 os.getcwd(), 
                 CHECKPOINT_DIR, 
-                f"{ARCH}_{LAST_CHECKPOINT_EPOCH}_{CHECKPOINT_POSTFIX}"), 
+                f"{ARCH}_{LAST_CHECKPOINT_EPOCH}{CHECKPOINT_POSTFIX}"), 
             model, 
             optimizer)
     else:
@@ -137,8 +137,10 @@ def main(argv):
             start = time.time()
             save_checkpoint(
                 getStateDict(
-                    model, epoch, 
-                    ARCH, best_acc, 
+                    model, 
+                    epoch, 
+                    ARCH, 
+                    best_acc, 
                     optimizer), 
                 is_best, ARCH, os.path.join(os.getcwd(), CHECKPOINT_DIR))
             checkpoint_time.update(time.time() - start)
