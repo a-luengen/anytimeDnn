@@ -9,6 +9,7 @@ from msdnet.models.msdnet import MSDNet
 from resnet import ResNet
 import densenet.densenet as dn
 import densenet.torchDensenet as tdn
+from collections import OrderedDict
 
 def get_msd_net_model():
     grFact = '1-2-4-4'
@@ -141,7 +142,7 @@ def save_checkpoint(state, is_best: bool, arch: str, checkpoint_dir: str, filena
         best_filePath = os.path.join(checkpoint_dir, best_filename)
         shutil.copyfile(target, best_filePath)
 
-def resumeFromPath(path : str, model, optimizer):
+def resumeFromPath(path : str, model, optimizer=None):
     start_epoch = 0
     best_prec1 = 0.0
 
@@ -155,7 +156,6 @@ def resumeFromPath(path : str, model, optimizer):
     if not (torch.cuda.is_available() and isinstance(model, torch.nn.DataParallel)):
         checkpoint = torch.load(path, map_location=torch.device('cpu'))
         # remove 'module.' string before keys in state_dict
-        from collections import OrderedDict
         new_state_dict = OrderedDict()
         for k,v in checkpoint['state_dict'].items():
             name = k.replace('module.', '') # remove 'module.'
@@ -166,7 +166,8 @@ def resumeFromPath(path : str, model, optimizer):
     
     model.load_state_dict(checkpoint['state_dict'])
     
-    optimizer.load_state_dict(checkpoint['optimizer'])
+    if optimizer is not None:
+        optimizer.load_state_dict(checkpoint['optimizer'])
 
     start_epoch = checkpoint['epoch']
     best_prec1 = checkpoint['best_acc']
