@@ -18,9 +18,19 @@ import logging
 
 from utils import *
 
+################################- Constants for Checkpoints -###################################
+# File name containing checkpoint for given architecture: <arch_name>_<EPOCH>_checkpoint.pth.tar
+LAST_CHECKPOINT_EPOCH = 0
+# True: Resume from a checkpoint file stored in the checkpoint subdirectory 
+# or use default if none is found
+# False: Do not resume from any possible checkpoint file
+RESUME = True
+ARCH = 'resnet101'
+ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169']
+################################################################################################
+
 IS_DEBUG = False
 DEBUG_ITERATIONS = 40
-
 STAT_FREQUENCY = 200
 LEARNING_RATE = 0.1
 MOMENTUM = 0.9
@@ -30,9 +40,6 @@ START_EPOCH = 0
 EPOCHS = 90
 CHECKPOINT_INTERVALL = 4 
 CHECKPOINT_DIR = 'checkpoints'
-ARCH = 'resnet101'
-
-ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169']
 
 # for repo:
 # raw images
@@ -43,7 +50,6 @@ DATA_PATH = "data/imagenet_full"
 # DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
 BATCH_SIZE = 4
 NUM_WORKERS = 1
-RESUME = True
 
 def main(argv):
     torch.cuda.empty_cache()
@@ -98,7 +104,7 @@ def main(argv):
 
     if RESUME:
         model, optimizer, start_epoch, best_acc  = resumeFromPath(
-            os.path.join(os.getcwd(), CHECKPOINT_DIR, ARCH + CHECKPOINT_POSTFIX), 
+            os.path.join(os.getcwd(), CHECKPOINT_DIR, ARCH + f"_{LAST_CHECKPOINT_EPOCH}_" + CHECKPOINT_POSTFIX), 
             model, 
             optimizer)
     else:
