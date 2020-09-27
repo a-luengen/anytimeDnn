@@ -85,20 +85,9 @@ def main(argv):
         weight_decay=WEIGHT_DECAY)
     
     cudnn.benchmark = True
-
-
-
-    #train_loader, test_loader, _ = get_dataloaders_alt(
-    #    DATA_PATH, 
-    #    data="ImageNet", 
-    #    use_valid=True, 
-    #    save='data/{}-{}'.format(ARCH, datetime.datetime.now().strftime("%Y-%m-%d-%H")),
-    #    batch_size=BATCH_SIZE, 
-    #    workers=NUM_WORKERS, 
-    #    splits=['train', 'val', 'test'])
     
     train_loader, test_loader, _ = get_zipped_dataloaders(
-        os.path.join(os.getcwd(), "data", "imagenet_red"), 
+        os.path.join(os.getcwd(), "data", "imagenet_full"), 
         BATCH_SIZE, 
         use_valid=True)
 
@@ -108,7 +97,10 @@ def main(argv):
     
 
     if RESUME:
-        model, optimizer, start_epoch, best_acc  = resumeFromPath(os.path.join(os.getcwd(), CHECKPOINT_DIR, ARCH + CHECKPOINT_POSTFIX), model, optimizer)
+        model, optimizer, start_epoch, best_acc  = resumeFromPath(
+            os.path.join(os.getcwd(), CHECKPOINT_DIR, ARCH + CHECKPOINT_POSTFIX), 
+            model, 
+            optimizer)
     else:
         start_epoch = START_EPOCH
         best_acc = 0.0
@@ -147,7 +139,8 @@ def main(argv):
             break
         epoch_time.update(time.time() - end)
         end = time.time()
-        logging.info(epoch_time)
+        logging.info(epoch)
+        logging.info(f"Avg-Epoch={epoch_time.avg}sec, Avg-Checkp.={checkpoint_time.avg}sec")
     logging.info(f"Best accuracy: {best_acc}")
 
 def accuracy(output, target, topk=(1,)):
