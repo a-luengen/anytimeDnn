@@ -207,17 +207,18 @@ def train(train_loader, model, criterion, optimizer, epoch):
         end = time.time()
 
         # printing statistics every 2000 mini batch size
-        if i % STAT_FREQUENCY == STAT_FREQUENCY - 1:
-            logging.info(f'Stats of Train loop {i} of {len(train_loader)}')
-            # measure accuracy and record loss
-            
-            logging.info(f'Epoch {epoch} - Iteration {i}/{len(train_loader)} - Loss {loss}')
+        if i % STAT_FREQUENCY == STAT_FREQUENCY - 1:            
+            logging.info(f'Epoch {epoch} Train loop - Iteration {i}/{len(train_loader)} - Loss {loss}')
             logging.info(top1)
             logging.info(top5)
             logging.info(batch_time)
             logging.info(data_load_time)
         if IS_DEBUG and i == DEBUG_ITERATIONS:
                 break
+    logging.info(f"Epoch {epoch} train summary: Avg. Acc@1={top1.avg:6.2f} - " 
+        + f"Avg. Acc@5={top5.avg:6.2f} - " 
+        + f"Avg. Batch={batch_time.avg:6.2f}sec - "
+        + f"Avg. DataLoad={data_load_time.avg}sec" )
 
 def validate(val_loader, model, criterion):
     """Compute average accuracy, top 1 and top 5 accuracy"""
@@ -279,23 +280,20 @@ def loadAndEvaluate():
 
     logging.debug('Loading Test Data..')
 
-    #_, _, testLoader = get_dataloaders_alt(
-    #    DATA_PATH, 
-    #    data="ImageNet", 
-    #    use_valid=True, 
-    #    save='data/default-{}'.format(datetime.datetime.now()),
-    #    batch_size=BATCH_SIZE, 
-    #    workers=NUM_WORKERS, 
-    #    splits=['train', 'val', 'test'])
     _, _, testLoader = get_zipped_dataloaders(DATA_PATH, BATCH_SIZE, use_valid=True)
+    grndT, pred = evaluateModel(model, testLoader)
+
+    printStats(grndT, pred)
+
+def evaluateModel(model, loader):
     model.eval()
 
     with torch.no_grad():
-        logging.debug(f'Loaded testData with {len(testLoader.dataset)} testImages and {BATCH_SIZE} images per batch.')
+        logging.debug(f'Loaded testData with {len(loader.dataset)} testImages and {BATCH_SIZE} images per batch.')
 
         classes = getClasses(os.path.join(DATA_PATH, 'val'))
-        pred, grndT = [], []
-        for i, (images, labels) in enumerate(testLoader):
+        grndT, pred = [], []
+        for i, (images, labels) in enumerate(loader):
             logging.debug(f"Evaluating: {i}-th iteration")
             outputs = model(images)
             _, predicted = torch.max(outputs, 1)
@@ -304,8 +302,7 @@ def loadAndEvaluate():
             
             if IS_DEBUG and i == DEBUG_ITERATIONS:
                 break
-
-    printStats(grndT, pred)
+        return grndT, pred
 
 if __name__ == "__main__":
     curTime = datetime.datetime.now()
