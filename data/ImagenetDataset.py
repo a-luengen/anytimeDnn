@@ -135,8 +135,7 @@ class ZippedDataset(torch.utils.data.Dataset):
         self.archive = db.open_zip_archive(arch_path)
         self.transform = transform
     
-        self.class_to_label = list(set(self.img_class_mapping))
-        self.class_to_label.sort()
+        self.class_to_label = self.__getClassToLabelMapping__()
 
     def __len__(self) -> int:
         return len(self.img_class_mapping)
@@ -145,6 +144,11 @@ class ZippedDataset(torch.utils.data.Dataset):
         img_data = Image.fromarray(self.archive.read_jpg_as_numpy(f'{index}.jpg'))     
         img_data = self.transform(img_data)
         return (img_data, self.class_to_label.index(self.img_class_mapping[index]))
+
+    def __getClassToLabelMapping__(self):
+        classToLabelMapping = list(set(self.img_class_mapping))
+        classToLabelMapping.sort()
+        return classToLabelMapping
 
 def get_zipped_dataloaders(data_path: str, batch_size: int, num_worker=1, use_valid=False) -> (DataLoader, DataLoader, DataLoader):
     train_transforms = transforms.Compose([

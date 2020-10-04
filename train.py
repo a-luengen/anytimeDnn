@@ -8,6 +8,7 @@ from resnet import ResNet
 import densenet.densenet as dn
 
 from data.ImagenetDataset import get_zipped_dataloaders
+from data.utils import getLabelToClassMapping
 
 import os
 import shutil
@@ -18,15 +19,18 @@ import logging
 
 from utils import *
 
+ARCH_NAMES = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169']
+
+parser = argparse.ArgumentParser(description='Train several image classification network architectures.')
+parser.add_argument('--arch', '-a', metavar='ARCH_NAME', type=str, default='resnet50', 
+    choices=ARCH_NAMES, 
+    help='Specify which kind of network architecture to train.')
+parser.add_argument('--epoch', '-e', metavar='N', type=int, default=argparse.SUPPRESS, help='Resume training from the given epoch. 0-based from [0..n-1]')
+
+
 ################################- Constants for Checkpoints -###################################
 # File name containing checkpoint for given architecture: <arch_name>_<EPOCH>_checkpoint.pth.tar
 LAST_CHECKPOINT_EPOCH = 0
-# True: Resume from a checkpoint file stored in the checkpoint subdirectory 
-# or use default if none is found
-# False: Do not resume from any possible checkpoint file
-RESUME = True
-ARCH = 'resnet101'
-ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169']
 ################################################################################################
 
 IS_DEBUG = False
@@ -48,19 +52,19 @@ CHECKPOINT_DIR = 'checkpoints'
 DATA_PATH = "data/imagenet_full"
 # for colab:
 # DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
-BATCH_SIZE = 4
+BATCH_SIZE = 12
 NUM_WORKERS = 1
 
-def main(argv):
+def main(args):
     torch.cuda.empty_cache()
 
     n_gpus_per_node = torch.cuda.device_count()
     logging.info(f"Found {n_gpus_per_node} GPU(-s)")
 
     # create model 
-    model = getModel(ARCH)
+    model = getModel(args.arch)
 
-    logging.info(f"Training Arch:{ARCH}")
+    logging.info(f"Training Arch:{args.arch}")
 
     if not torch.cuda.is_available():
       logging.warning("Using CPU for slow training process")
@@ -101,12 +105,12 @@ def main(argv):
     # size of batch:
     logging.debug(get_batch_size_stats(train_loader))
     
-    if RESUME:
+    if args.resume:
         model, optimizer, start_epoch, best_acc  = resumeFromPath(
             os.path.join(
                 os.getcwd(), 
                 CHECKPOINT_DIR, 
-                f"{ARCH}_{LAST_CHECKPOINT_EPOCH}{CHECKPOINT_POSTFIX}"), 
+                f"{args.arch}_{args.epoch}{CHECKPOINT_POSTFIX}"), 
             model, 
             optimizer)
     else:
@@ -139,10 +143,10 @@ def main(argv):
                 getStateDict(
                     model, 
                     epoch, 
-                    ARCH, 
+                    args.arch, 
                     best_acc, 
                     optimizer), 
-                is_best, ARCH, os.path.join(os.getcwd(), CHECKPOINT_DIR))
+                is_best, args.arch, os.path.join(os.getcwd(), CHECKPOINT_DIR))
             checkpoint_time.update(time.time() - start)
             logging.info(checkpoint_time)
         if IS_DEBUG:
@@ -274,19 +278,19 @@ def validate(val_loader, model, criterion):
                 return top1.avg
     return top1.avg
 
-def loadAndEvaluate():
-    model = getModel(ARCH)
+def loadAndEvaluate(args):
+    model = getModel(args.arch)
 
-    if os.path.exists(os.path.join(CHECKPOINT_DIR, ARCH + '_model_best.pth.tar')):
+    if os.path.exists(os.path.join(CHECKPOINT_DIR, args.arch + '_model_best.pth.tar')):
         logging.debug("Loading best model")
-        load_path = os.path.join(CHECKPOINT_DIR, ARCH + '_model_best.pth.tar')
+        load_path = os.path.join(CHECKPOINT_DIR, args.arch + '_model_best.pth.tar')
     else:
         logging.debug("Loading default model")
-        load_path = os.path.join(CHECKPOINT_DIR, ARCH + '_checkpoint.pth.tar')
+        load_path = os.path.join(CHECKPOINT_DIR, args.arch + '_checkpoint.pth.tar')
     
     logging.debug('Loading: ' + load_path)
 
-    model, _, _ = resumeFromPath(load_path, model)
+    model, _, _, _ = resumeFromPath(load_path, model)
 
     logging.debug('Loading Test Data..')
 
@@ -299,22 +303,26 @@ def evaluateModel(model, loader):
     model.eval()
 
     with torch.no_grad():
-        logging.debug(f'Loaded testData with {len(loader.dataset)} testImages and {BATCH_SIZE} images per batch.')
+        logging.info(f'Loaded testData with {len(loader.dataset)} testImages and {BATCH_SIZE} images per batch.')
 
-        classes = getClasses(os.path.join(DATA_PATH, 'val'))
+        classes = getLabelToClassMapping(os.path.join(os.getcwd(), DATA_PATH))
+
         grndT, pred = [], []
         for i, (images, labels) in enumerate(loader):
-            logging.debug(f"Evaluating: {i}-th iteration")
+            logging.info(f"Evaluating: {i}-th of {len(loader)} iteration")
             outputs = model(images)
             _, predicted = torch.max(outputs, 1)
-            pred = pred + [classes[predicted[k]] for k in range(BATCH_SIZE)]
-            grndT = grndT + [classes[labels[j]] for j in range(BATCH_SIZE)]
+            pred = pred + [classes[predicted[k]] for k in range(min(BATCH_SIZE, labels.shape[0]))]
+            grndT = grndT + [classes[labels[j]] for j in range(min(BATCH_SIZE, labels.shape[0]))]
             
             if IS_DEBUG and i == DEBUG_ITERATIONS:
                 break
         return grndT, pred
 
 if __name__ == "__main__":
+    args = parser.parse_args()
+    args.resume = ('epoch' in args)
+
     curTime = datetime.datetime.now()
 
     log_level = logging.INFO
@@ -322,5 +330,5 @@ if __name__ == "__main__":
         log_level = logging.DEBUG
 
     logging.basicConfig(filename=str(curTime) + ".log", level=log_level)
-    main(sys.argv)
-    logging.info(f"Top1 Accuracy: {loadAndEvaluate()}")
+    #main(args)
+    logging.info(f"Top1 Accuracy: {loadAndEvaluate(args)}")
