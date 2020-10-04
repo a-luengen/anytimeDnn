@@ -2,7 +2,10 @@ import unittest
 import os
 import shutil
 import random
+import torch
 import torchvision.models as models
+
+from .context import utils
 from utils import *
 
 class TestUtilFunctions(unittest.TestCase):
@@ -91,7 +94,7 @@ class TestUtilFunctions(unittest.TestCase):
         self.assertEqual(epoch, test_epoch)
         self.assertEqual(best_prec, test_acc)
     
-    def test050_testResumeCheckpointFunction_returnsCorrectParameter_onNoCheckpointFound(self):
+    def test050_testResumeCheckpointFunction_returnsDefaultParameter_onNoCheckpointFound(self):
 
         result_net, result_optim, epoch, best_prec = resumeFromPath("resnet_18.pth.tar", self.test_net, self.test_optim)
 

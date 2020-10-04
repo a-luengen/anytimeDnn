@@ -1,6 +1,6 @@
 import unittest
-import resnet.ResNet
 
+from .context import resnet
 
 class TestSkippingPolicies(unittest.TestCase):
 

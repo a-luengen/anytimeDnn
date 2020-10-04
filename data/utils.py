@@ -22,10 +22,6 @@ def processImagesByRatio(ratio: int, src_path : str, tar_path : str, set_type : 
     if not os.path.exists(tar_path):
         os.mkdir(tar_path)
 
-    # index-class mapping file
-    filename = "index-" + set_type + ".txt"
-    fileHandle = open(os.path.join(tar_path, filename), 'w')
-
     if not os.path.isdir(tar_path):
         os.mkdir(tar_path)
     tar_path = os.path.join(tar_path, set_type)
@@ -49,42 +45,45 @@ def processImagesByRatio(ratio: int, src_path : str, tar_path : str, set_type : 
     
     print(f"val classes: {len(val_cl_src_paths)}")
     
-    # copy all images from set
-    index = 0
-    img_name = ""
-    for class_name, src_path in zip(classes, val_cl_src_paths):
-        class_img_paths = os.listdir(src_path)
-        total_amount = len(class_img_paths)
-        cp_amount = int(ratio * total_amount)
+    # index-class mapping file
+    filename = "index-" + set_type + ".txt"
+    with open(os.path.join(tar_path, filename), 'w') as fileHandle:
+        # copy all images from set
+        index = 0
+        img_name = ""
+        for class_name, src_path in zip(classes, val_cl_src_paths):
+            class_img_paths = os.listdir(src_path)
+            total_amount = len(class_img_paths)
+            cp_amount = int(ratio * total_amount)
 
-        print(f"Copy {cp_amount}/{total_amount} to {tar_path}")
+            print(f"Copy {cp_amount}/{total_amount} to {tar_path}")
 
-        for i in range(0, cp_amount):
-            if not os.path.isdir(tar_path):
-                os.mkdir(tar_path)
+            for i in range(0, cp_amount):
+                if not os.path.isdir(tar_path):
+                    os.mkdir(tar_path)
 
-            file_type = class_img_paths[i].split(".")[1]
-            # remove any wired URL encoded parts from the filetype
-            if len("jpg") < len(file_type): 
-                file_type = file_type[:3]
-            img_name = f"{index}.{file_type}"
+                file_type = class_img_paths[i].split(".")[1]
+                # remove any wired URL encoded parts from the filetype
+                if len("jpg") < len(file_type): 
+                    file_type = file_type[:3]
+                img_name = f"{index}.{file_type}"
 
-            cp_from = os.path.join(src_path, class_img_paths[i])
-            cp_to = os.path.join(tar_path, img_name)
-            fileHandle.write(class_name + "\n")
-            print(f"Copy: \n --{cp_from} \n" 
-                    + f" ->{cp_to}")
+                cp_from = os.path.join(src_path, class_img_paths[i])
+                cp_to = os.path.join(tar_path, img_name)
+                fileHandle.write(class_name + "\n")
+                print(f"Copy: \n --{cp_from} \n" 
+                        + f" ->{cp_to}")
 
-            shutil.copyfile(cp_from, cp_to)
-            
-            index = index + 1
-    fileHandle.close()
-    return fileHandle.name
+                shutil.copyfile(cp_from, cp_to)
+                
+                index = index + 1
+        return fileHandle.name
+    return None
 
 def getClassToIndexMapping(path: str):
     print(path)
     if not os.path.isfile(path):
-        raise Exception
+        raise Exception(f"No Index file found at location: {path}")
     mapping = []
     file = open(path, 'r')
     for line in file:

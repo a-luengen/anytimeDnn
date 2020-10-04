@@ -3,7 +3,9 @@ import os
 import shutil
 import random
 import torchvision.models as models
-from data.utils import *
+
+from .context import data_utils as du
+#from data_utils import *
 
 class TestUtilFunctions(unittest.TestCase):
 
@@ -42,8 +44,8 @@ class TestUtilFunctions(unittest.TestCase):
         self.assertTrue(os.path.exists(self.image_src_val_path))
 
     def test01_transformAllImages_noException(self):
-        transformAllImages(self.image_tar_val_path, 'val')
-        transformAllImages(self.image_tar_train_path, 'train')
+        du.transformAllImages(self.image_tar_val_path, 'val')
+        du.transformAllImages(self.image_tar_train_path, 'train')
     
     def test02_processImagesByRatio_noException(self):
 
@@ -52,14 +54,14 @@ class TestUtilFunctions(unittest.TestCase):
 
         img_count_src = len(list(filter(isJPG, os.listdir(self.image_src_train_path))))
 
-        processImagesByRatio(1.0, self.image_src_train_path, self.image_tar_train_path, 'train')
+        du.processImagesByRatio(1.0, self.image_src_train_path, self.image_tar_train_path, 'train')
         
         img_count_tar = len(list(filter(isJPG, os.listdir(self.image_tar_train_path))))
         
         self.assertEqual(img_count_src, img_count_tar)
 
     def test03_generateNewImageDataset_noException(self):
-        generateNewImageDataset(self.image_base_path, self.test_new_dataset_path, 'val', ratio=1.0)
+        du.generateNewImageDataset(self.image_base_path, self.test_new_dataset_path, 'val', ratio=1.0)
     
     def test04_assertRatioCalculationIsCorrect(self):
         
