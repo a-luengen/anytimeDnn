@@ -10,8 +10,6 @@ from .context import data_utils as du
 class TestUtilFunctions(unittest.TestCase):
 
     image_test_path = "data/test-images"
-    
-    
 
     image_base_path = os.path.join(os.getcwd(), image_test_path)
 
@@ -72,3 +70,18 @@ class TestUtilFunctions(unittest.TestCase):
         tar = int(src * ratio)
 
         self.assertEqual(src, tar)
+    
+    def test04_getLabelToClassMappingIsCorrect(self):
+        test_path_train = os.path.join(os.getcwd(), "data", "imagenet_red", "index-train.txt")
+        test_path_val = os.path.join(os.getcwd(), "data", "imagenet_red")
+
+        label_to_class_val = du.getLabelToClassMapping(test_path_val)
+
+        # generate mapping from train index file "by hand"
+        label_to_class_train = du.getClassToIndexMapping(test_path_train)
+        label_to_class_train = list(set(label_to_class_train))
+        label_to_class_train.sort()
+
+        self.assertEqual(len(label_to_class_train), 40)
+        self.assertEqual(len(label_to_class_train), len(label_to_class_val))
+        self.assertEqual(label_to_class_train, label_to_class_val)

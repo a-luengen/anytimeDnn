@@ -91,6 +91,17 @@ def getClassToIndexMapping(path: str):
     file.close()
     return mapping
 
+def getLabelToClassMapping(data_path: str):
+    index_path = os.path.join(data_path, 'index-val.txt')
+
+    if not os.path.isfile(index_path):
+        raise Exception(f"No index file found in {data_path}")
+
+    mapping = getClassToIndexMapping(index_path)
+    label_to_class = list(set(mapping))
+    label_to_class.sort()
+    return label_to_class
+
 def transformTrainImage(img: Image) -> Image:
     trans = transforms.Compose([
         transforms.Resize(256),
