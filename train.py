@@ -330,5 +330,5 @@ if __name__ == "__main__":
         log_level = logging.DEBUG
 
     logging.basicConfig(filename=str(curTime) + ".log", level=log_level)
-    #main(args)
-    logging.info(f"Top1 Accuracy: {loadAndEvaluate(args)}")
+    main(args)
+    loadAndEvaluate(args)
