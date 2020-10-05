@@ -4,48 +4,17 @@ from resnet.BottleNeck import BottleNeck
 from resnet.BasicBlock import BasicBlock
 #from resnet.OCL_Convolution import OCL_Convolution
 import logging
-from random import *
-
-
-class ResnetDropResidualPolicy(object):
-    def __init__(self):
-        self.dropCount = 0
-        self.layerCount = 0
-
-    def shouldDrop(self) -> bool:
-        self.dropCount += 1
-        return True
-
-    def apply(self, residual_func, shortcut_func, x):
-        self.layerCount += 1
-        logging.info(f"Called on {self.layerCount}-Layer")
-        if self.shouldDrop():
-            return shortcut_func(x)
-        else:
-            return residual_func(x) + shortcut_func(x)
-
-class ResnetDropMaxRandomPolicy(ResnetDropResidualPolicy):
-    def __init__(self, max_drop):
-        super(ResnetDropMaxRandomPolicy, self).__init__()
-        self._max = max_drop
-    
-    def shouldDrop(self) -> bool:
-        if self.dropCount < _max:
-            drop = random() >= 0.5
-            if drop:
-                self.dropCount += 1
-            return drop
-        return False
-
+from resnet.DropPolicies import *
 
 class ResNet(nn.Module):
     """
-        Modified ResNet class to use the Convolution implementation in OpenCL
+        Modified ResNet class to use the Drop Policies to test Layer-Skipping techniques.
     """
 
     def __init__(self, block, num_block, num_classes=40, use_policy=False):
         super().__init__()
         self.in_channels = 64
+        self.skipable_layer_count = 0
 
         if use_policy: 
             self.dropPolicy = getDropPolicy()
@@ -67,6 +36,9 @@ class ResNet(nn.Module):
         self.conv5_x = self._make_layer(block, 512, num_block[3], 2)
         self.avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512 * block.expansion, num_classes)
+
+        if self.dropPolicy is not None:
+            self.dropPolicy.setMaxSkipableLayers(self.skipable_layer_count)
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
         """
@@ -91,6 +63,7 @@ class ResNet(nn.Module):
             #layers.append(block(self.in_channels, out_channels, stride, use_ocl=self.use_ocl))
             layers.append(block(self.in_channels, out_channels, stride, dropResidualPolicy=self.dropPolicy))
             self.in_channels = out_channels * block.expansion
+            self.skipable_layer_count += 1
         
         return nn.Sequential(*layers)
 
