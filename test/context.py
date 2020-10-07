@@ -7,3 +7,4 @@ import utils
 import resnet.ResNet
 import resnet.utils as resnet_utils
 import data.utils as data_utils
+import densenet
