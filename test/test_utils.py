@@ -74,7 +74,7 @@ class TestUtilFunctions(unittest.TestCase):
             self.test_net,
             self.test_optim)
 
-        self.assertEqual(epoch, test_epoch)
+        self.assertEqual(epoch, test_epoch + 1)
         self.assertEqual(best_prec, test_acc)
     
     def test040_testResumeCheckpointFunction_WithBest_returnsCorrectParameters(self):
@@ -91,7 +91,7 @@ class TestUtilFunctions(unittest.TestCase):
             self.test_net,
             self.test_optim)
 
-        self.assertEqual(epoch, test_epoch)
+        self.assertEqual(epoch, test_epoch + 1)
         self.assertEqual(best_prec, test_acc)
     
     def test050_testResumeCheckpointFunction_returnsDefaultParameter_onNoCheckpointFound(self):
@@ -100,7 +100,7 @@ class TestUtilFunctions(unittest.TestCase):
 
         self.assertEqual(result_net, self.test_net)
         self.assertEqual(result_optim, self.test_optim)
-        self.assertEqual(epoch, 0)
+        self.assertEqual(epoch, 1)
         self.assertEqual(best_prec, 0.0)
 
     def test060_architectureParameterAmount_SameAsPytorchImpl(self):  

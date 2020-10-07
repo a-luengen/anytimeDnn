@@ -4,6 +4,7 @@ import shutil
 import logging
 import torch
 import torchvision.models
+import pandas as pn
 from sklearn import metrics
 from msdnet.models.msdnet import MSDNet
 from resnet import ResNet
@@ -75,11 +76,41 @@ def printStats(ground_truth, predicted):
     logging.info("Recall and precision:")
     logging.info(metrics.classification_report(ground_truth, predicted, digits=3))
 
+def generateAndStoreClassificationReportCSV(ground_truth, predicted, filename, base_path=None):    
+    report_dict = metrics.classification_report(ground_truth, predicted, output_dict=True)
+    df = pn.DataFrame(report_dict).transpose()
+
+    if base_path is None:
+        base_path = os.path.join(os.getcwd(), 'reports')
+    if not os.path.isdir(base_path):
+        os.mkdir(base_path)
+
+    df.to_csv(os.path.join(base_path, filename), index=False)
+
 def getClasses(data_path: str):
     class_list = os.listdir(data_path)
     logging.debug(class_list)
     logging.debug(len(class_list))
     return class_list
+
+def getModelWithOptimized(arch: str, n=0):
+    if 'drop-rand-n' in arch:
+        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
+
+    if arch == 'resnet18-drop-rand-n':
+        return ResNet.resnet18(use_policy=True)
+    elif arch == 'resnet34-drop-rand-n':
+        return ResNet.resnet34(use_policy=True)
+    elif arch == 'resnet50-drop-rand-n':
+        return ResNet.resnet50(use_policy=True)
+    elif arch == 'resnet101-drop-rand-n':
+        return ResNet.resnet101(use_policy=True)
+    elif arch == 'resnet152-drop-rand-n':
+        return ResNet.resnet152(use_policy=True)
+    elif arch == 'densenet121-skip':
+        return tdn.densenet121(num_classes=40, use_skipping=True)
+    else:
+        return getModel(arch)
 
 def getModel(arch: str):
     logging.info(f"Loading model: {arch}")
@@ -90,8 +121,6 @@ def getModel(arch: str):
         model = ResNet.resnet34()
     elif arch == 'resnet50':
         model = ResNet.resnet50()
-    elif arch == 'resnet50-pol':
-        model = ResNet.resnet50(use_policy=True)
     elif arch == 'resnet101':
         model = ResNet.resnet101()
     elif arch == 'resnet152':
@@ -149,7 +178,7 @@ def resumeFromPath(path : str, model, optimizer=None):
     if not os.path.isfile(path):
         print(f'No file found {path}')
         logging.info(f"=> no checkpoint found at '{path}'")
-        return model, optimizer, start_epoch, best_prec1
+        return model, optimizer, start_epoch + 1, best_prec1
 
     logging.debug(f"=> loading checkpoint {path}")
     
@@ -169,8 +198,8 @@ def resumeFromPath(path : str, model, optimizer=None):
     if optimizer is not None:
         optimizer.load_state_dict(checkpoint['optimizer'])
 
-    start_epoch = checkpoint['epoch']
+    start_epoch = checkpoint['epoch'] + 1
     best_prec1 = checkpoint['best_acc']
-    logging.info(f"=> loaded checkpoint '{path}' (epoch {checkpoint['epoch']})")
+    logging.info(f"=> loaded checkpoint '{path}' (epoch {checkpoint['epoch']} -> {start_epoch})")
 
     return model, optimizer, start_epoch, best_prec1
