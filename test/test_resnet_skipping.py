@@ -1,10 +1,10 @@
 import unittest
 import torch
-
+import torchvision
 from .context import resnet
 from .context import resnet_utils
 
-class TestSkippingPolicies(unittest.TestCase):
+class TestResnetSkippingPolicies(unittest.TestCase):
 
     def test00_resnet50_noExceptionOnCreation(self):
         test_net = resnet.ResNet.resnet50()
