@@ -153,7 +153,7 @@ CHECKPOINT_BEST_POSTFIX = '_model_best.pth.tar'
 
 def save_checkpoint(state, is_best: bool, arch: str, checkpoint_dir: str, filename=None):
     if filename is None:
-        filename = f"{state['arch']}_{state['epoch']}_{CHECKPOINT_POSTFIX}"
+        filename = f"{state['arch']}_{state['epoch']}{CHECKPOINT_POSTFIX}"
 
     if not os.path.isdir(checkpoint_dir):
         os.mkdir(checkpoint_dir)
@@ -167,7 +167,7 @@ def save_checkpoint(state, is_best: bool, arch: str, checkpoint_dir: str, filena
     logging.debug(target)
 
     if is_best:
-        best_filename = f"{state['arch']}_{state['epoch']}_{CHECKPOINT_BEST_POSTFIX}"
+        best_filename = f"{state['arch']}_{state['epoch']}{CHECKPOINT_BEST_POSTFIX}"
         best_filePath = os.path.join(checkpoint_dir, best_filename)
         shutil.copyfile(target, best_filePath)
 

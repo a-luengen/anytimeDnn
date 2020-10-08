@@ -36,7 +36,7 @@ class TestUtilFunctions(unittest.TestCase):
 
         save_checkpoint(state_dict, False, self.arch_name, self.test_dir)
 
-        self.assertTrue(os.path.exists(os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}_" + CHECKPOINT_POSTFIX)))
+        self.assertTrue(os.path.exists(os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}" + CHECKPOINT_POSTFIX)))
     
     def test015_testCheckpointFunction_withIsBestTrue_noException(self):
         test_epoch = 0
@@ -44,7 +44,7 @@ class TestUtilFunctions(unittest.TestCase):
 
         save_checkpoint(state_dict, True, self.arch_name, self.test_dir)
 
-        self.assertTrue(os.path.exists(os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}_" + CHECKPOINT_BEST_POSTFIX)))
+        self.assertTrue(os.path.exists(os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}" + CHECKPOINT_BEST_POSTFIX)))
     
     def test020_getStateDict_CorrectParametersSet(self):
         test_acc = random.random()
@@ -67,10 +67,10 @@ class TestUtilFunctions(unittest.TestCase):
 
         save_checkpoint(state_dict, is_best, self.arch_name, self.test_dir)
         
-        self.assertTrue(os.path.isfile(os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}_" + CHECKPOINT_POSTFIX)))
+        self.assertTrue(os.path.isfile(os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}" + CHECKPOINT_POSTFIX)))
 
         self.test_net, self.optim, epoch, best_prec = resumeFromPath(
-            os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}_" + CHECKPOINT_POSTFIX), 
+            os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}" + CHECKPOINT_POSTFIX), 
             self.test_net,
             self.test_optim)
 
@@ -87,7 +87,7 @@ class TestUtilFunctions(unittest.TestCase):
         save_checkpoint(state_dict, is_best, self.arch_name, self.test_dir)
 
         self.test_net, self.test_optim, epoch, best_prec = resumeFromPath(
-            os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}_" + CHECKPOINT_BEST_POSTFIX), 
+            os.path.join(self.test_dir, self.arch_name + f"_{test_epoch}" + CHECKPOINT_BEST_POSTFIX), 
             self.test_net,
             self.test_optim)
 
