@@ -13,6 +13,9 @@ IMAGE_SIZE = (256, 256)
 IMAGE_CROP_SIZE = (224, 224)
 TRAIN_SPLIT_DEFAULT = 0.9
 
+FULL_SET_PATH = "data/imagenet_full"
+REDUCED_SET_PATH = "data/imagenet_red"
+
 # source:
 # https://gist.github.com/mf1024/a9199a325f9f7e98309b19eb820160a7
 # Thanks mate!
