@@ -10,6 +10,7 @@ from msdnet.models.msdnet import MSDNet
 from resnet import ResNet
 import densenet.densenet as dn
 import densenet.torchDensenet as tdn
+import densenet.DropPolicies as dndrop
 from collections import OrderedDict
 
 def get_msd_net_model():
@@ -108,6 +109,10 @@ def getModelWithOptimized(arch: str, n=0):
     elif arch == 'resnet152-drop-rand-n':
         return ResNet.resnet152(use_policy=True)
     elif arch == 'densenet121-skip':
+        
+        dnn121_config = (6, 12, 24, 16)
+        dndrop.setSkipPolicy(dndrop.DNDropRandNPolicy(dnn121_config, 1))
+
         return tdn.densenet121(num_classes=40, use_skipping=True)
     else:
         return getModel(arch)

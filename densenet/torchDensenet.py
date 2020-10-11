@@ -8,6 +8,7 @@ from collections import OrderedDict
 from torch import Tensor
 #from torch.jit.annotations import List
 
+from .DropPolicies import getSkipPolicy, DenseNetDropPolicy
 
 __all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161']
 
@@ -17,7 +18,6 @@ model_urls = {
     'densenet201': 'https://download.pytorch.org/models/densenet201-c1103571.pth',
     'densenet161': 'https://download.pytorch.org/models/densenet161-8d451a50.pth',
 }
-
 
 class _DenseLayer(nn.Module):
     def __init__(self, num_input_features, growth_rate, bn_size, drop_rate, memory_efficient=False):
@@ -74,11 +74,87 @@ class _DenseLayer(nn.Module):
         return new_features
 
 
+class _DenseBlockWithSkip(nn.ModuleDict):
+    _version = 2
+    
+    growth_rate = 0
+
+    replacement = None
+    num_input_features = 0
+
+    layer_skip_config = None
+    layer_tensor_replacement = None
+
+    print_str = None
+
+    def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate, memory_efficient=False, 
+                    layer_skip_config=None):
+        super(_DenseBlockWithSkip, self).__init__()
+        self.growth_rate = growth_rate
+        self.drop_layer = 1
+        self.num_input_features = num_input_features
+        
+        if layer_skip_config is None:
+            self.layer_skip_config = [False] * num_layers
+        else:
+            self.layer_skip_config = layer_skip_config
+
+        self.layer_tensor_replacement = dict([
+            (56, torch.zeros(1, growth_rate, 56, 56)),
+            (28, torch.zeros(1, growth_rate, 28, 28)),
+            (14, torch.zeros(1, growth_rate, 14, 14)),
+            (7, torch.zeros(1, growth_rate, 7, 7))
+        ])
+
+
+        for i in range(num_layers):
+
+            layer = _DenseLayer(
+                num_input_features + i * growth_rate,
+                growth_rate=growth_rate,
+                bn_size=bn_size,
+                drop_rate=drop_rate,
+                memory_efficient=memory_efficient,
+            )
+
+            #if i == self.drop_layer:
+            #    print("DROPPED LAYER:\n")
+            #print(i, layer)
+            #if i == self.drop_layer:
+            #    print("\nDROPPED LAYER^^^^^^^^^\n")
+
+            self.add_module('denselayer%d' % (i + 1), layer)
+
+    def forward(self, init_features):
+        features = [init_features]
+        #prev_features = init_features
+        #print(f"Initial features shape: {init_features.shape}")
+        replacement = self.layer_tensor_replacement[init_features.shape[2]]
+        #print(f"Replacement: {replacement.shape}")
+
+        for i, (_, layer) in enumerate(self.items()):
+            if self.layer_skip_config[i]:
+                #print(f"Skipping layer {i+1}")
+
+                #print(f"Replacing with {replacement.shape}")
+                features.append(replacement)
+                continue
+            #print(f"Before passthrough: {len(features)}")
+            new_features = layer(features)
+            #print(f"Resulting features: {len(new_features)}")
+            #print(new_features.shape)
+            features.append(new_features)
+            #print(f"New appended features: {len(features)}")
+            #prev_features = new_features
+        #print(f"Resulting forwardpass shape: {cattenated.shape}")
+        return torch.cat(features, 1)
+
 class _DenseBlock(nn.ModuleDict):
     _version = 2
 
     def __init__(self, num_layers, num_input_features, bn_size, growth_rate, drop_rate, memory_efficient=False):
         super(_DenseBlock, self).__init__()
+
         for i in range(num_layers):
             layer = _DenseLayer(
                 num_input_features + i * growth_rate,
@@ -87,11 +163,15 @@ class _DenseBlock(nn.ModuleDict):
                 drop_rate=drop_rate,
                 memory_efficient=memory_efficient,
             )
+            
             self.add_module('denselayer%d' % (i + 1), layer)
+
+        #for i, (_, layer) in enumerate(self.items()):
+        #    print(f"{i}\n {layer}")
 
     def forward(self, init_features):
         features = [init_features]
-        for name, layer in self.items():
+        for _, layer in self.items():
             new_features = layer(features)
             features.append(new_features)
         return torch.cat(features, 1)
@@ -124,9 +204,15 @@ class DenseNet(nn.Module):
     """
 
     def __init__(self, growth_rate=32, block_config=(6, 12, 24, 16),
-                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False):
+                 num_init_features=64, bn_size=4, drop_rate=0, num_classes=1000, memory_efficient=False, 
+                 use_skipping=False, block_skip_config=None):
 
         super(DenseNet, self).__init__()
+
+        if block_skip_config is None:
+            block_skip_config = []
+            for i in block_config:
+                block_skip_config.append([False] * i)
 
         # First convolution
         self.features = nn.Sequential(OrderedDict([
@@ -140,17 +226,29 @@ class DenseNet(nn.Module):
         # Each denseblock
         num_features = num_init_features
         for i, num_layers in enumerate(block_config):
-            block = _DenseBlock(
-                num_layers=num_layers,
-                num_input_features=num_features,
-                bn_size=bn_size,
-                growth_rate=growth_rate,
-                drop_rate=drop_rate,
-                memory_efficient=memory_efficient
-            )
+            block = None
+            if use_skipping:
+                block = _DenseBlockWithSkip(                    
+                    num_layers=num_layers,
+                    num_input_features=num_features,
+                    bn_size=bn_size,
+                    growth_rate=growth_rate,
+                    drop_rate=drop_rate,
+                    memory_efficient=memory_efficient,
+                    layer_skip_config=block_skip_config[i])
+            else:
+                block = _DenseBlock(
+                    num_layers=num_layers,
+                    num_input_features=num_features,
+                    bn_size=bn_size,
+                    growth_rate=growth_rate,
+                    drop_rate=drop_rate,
+                    memory_efficient=memory_efficient
+                )
             self.features.add_module('denseblock%d' % (i + 1), block)
             
-            num_features = num_features + num_layers * growth_rate
+            
+            num_features = num_features + num_layers * growth_rate# - growth_rate# adjust this value, to the amount of dropped layers
 
             if i != len(block_config) - 1:
 
@@ -187,9 +285,17 @@ class DenseNet(nn.Module):
 
 
 
-def _densenet(arch, growth_rate, block_config, num_init_features, pretrained, progress,
+
+
+def _densenet(arch, growth_rate, block_config, num_init_features, pretrained, progress, use_skipping=False,
               **kwargs):
-    model = DenseNet(growth_rate, block_config, num_init_features, **kwargs)
+    block_skip_config = None
+    if use_skipping:
+        policy = getSkipPolicy()
+        block_skip_config = policy.getFullConfig()
+
+    model = DenseNet(growth_rate, block_config, num_init_features,
+                        use_skipping=use_skipping, block_skip_config=block_skip_config, **kwargs)
     #if pretrained:
         #_load_state_dict(model, model_urls[arch], progress)
     return model
