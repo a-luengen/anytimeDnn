@@ -41,16 +41,16 @@ START_EPOCH = 0
 EPOCHS = 90
 CHECKPOINT_INTERVALL = 30
 CHECKPOINT_DIR = 'checkpoints'
-ARCH = 'resnet101'
+ARCH = 'msdnet'
 
-ARCH_NAMES = ['resnet50', 'resnet101', 'resnet152', 'densenet121', 'densenet169', 'msdnet']
+ARCH_NAMES = ['msdnet']
 
 # for repo:
 #DATA_PATH = "data/imagenet_images"
 # for colab:
 DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
 BATCH_SIZE = 18
-NUM_WORKERS = 2
+NUM_WORKERS = 1
 
 class Object(object):
   pass
