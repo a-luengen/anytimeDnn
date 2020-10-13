@@ -96,7 +96,29 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         test_res = densenet.DropPolicies.getSkipPolicy()
         self.assertEqual(test_pol, test_res)
 
+    def test067_GetSkipPolicy_ReturnsPreviouslySetPolicy_WithExactConfiguration(self):
+        test_block_config = (6, 12, 24, 16)
+        test_n = 10
+        test_pol = densenet.DropPolicies.DNDropRandNPolicy(test_block_config, test_n)
+        densenet.DropPolicies.setSkipPolicy(test_pol)
+
+        ret_pol = densenet.DropPolicies.getSkipPolicy()
+
+        self.assertEqual(ret_pol.getFullConfig, test_pol.getFullConfig)
+
+    def test068_DNDropRandNPolicy_WihtMoreNThanPossible_ShouldThrowException(self):
+        test_block_config = (2, 3, 4)
+        test_n = 10
+
+        self.assertRaises(
+            ValueError, 
+            densenet.DropPolicies.DNDropRandNPolicy,
+            test_block_config, 
+            test_n
+            )
+
     def test070_DenseNetWithoutBlockConfig_SameResultAsPlainResnet(self):
+        
         test_policy = densenet.DropPolicies.DNDropRandNPolicy((6, 12, 24, 16), 0)
         densenet.DropPolicies.setSkipPolicy(test_policy)
 

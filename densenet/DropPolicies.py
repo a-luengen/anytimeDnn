@@ -18,9 +18,13 @@ class DenseNetDropPolicy(object):
 class DNDropRandNPolicy(DenseNetDropPolicy):
     def __init__(self, block_config, n):
         super(DNDropRandNPolicy, self).__init__(block_config)
-        self._n = n   
 
         max_layers = sum(block_config)
+
+        if n > max_layers:
+            raise ValueError('Value for n is to heigh. Cannot drop more Layers than possible.')
+
+        self._n = n   
 
         # generate random 
         temp_perm = getRandomBoolListPermutation(max_layers, n)
