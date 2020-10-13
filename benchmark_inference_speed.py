@@ -1,85 +1,113 @@
+import torch
+import torch.nn as nn
+import torch.backends.cudnn as cudnn
 import os
 import shutil
 import time
-from timeit import default_timer as timer
 import datetime
 import sys
 import logging
+import cProfile
 from tqdm import tqdm
-
-from msdnet.dataloader import get_dataloaders_alt
-from resnet import ResNet
-import densenet.densenet as dn
-
-import torch
-import torch.nn as nn
+from timeit import default_timer as timer
 from torch.utils.data import DataLoader
-import torch.backends.cudnn as cudnn
 from sklearn import metrics
 
-
+import densenet.densenet as dn
+from msdnet.dataloader import get_dataloaders_alt
+from resnet import ResNet
 from utils import *
 from data.ImagenetDataset import get_zipped_dataloaders
 from data.utils import getLabelToClassMapping
 
-
-
-AVAILABLE_STATE_DICTS = ['densenet121', 'densenet121-skip']# 'densenet169']
+#AVAILABLE_STATE_DICTS = ['densenet121', 'densenet121-skip']# 'densenet169']
+#AVAILABLE_STATE_DICTS = ['densenet121-skip']# 'densenet169']
+AVAILABLE_STATE_DICTS = ['resnet18-drop-rand-n', 'resnet34-drop-rand-n', 'resnet50-drop-rand-n']
+#AVAILABLE_STATE_DICTS = ['resnet18', 'resnet34', 'resnet50',]
+#AVAILABLE_STATE_DICTS = ['resnet18', 'resnet34', 'resnet50', 'densenet121', 'densenet169']
 STATE_DICT_PATH = os.path.join(os.getcwd(), 'state')
-BATCH_SIZE = 8
+BATCH_SIZE = 1
+SPEED_RUNS = 30
+QUALITY_RUNS = 10
+LAYERS_TO_SKIP = 1
 
 def executeSpeedBench():
     # run benchmark loop
-    for i, arch in enumerate(AVAILABLE_STATE_DICTS):
-        runSpeedBenchForModel(arch, warmup=True)
-        runSpeedBenchForModel(arch, warmup=False)
+    with tqdm(total=(len(AVAILABLE_STATE_DICTS) * SPEED_RUNS), ncols=100, desc="Speed Progress") as pbar:
 
-def executeQualityEvaluation(only_best):
-    total = len(AVAILABLE_STATE_DICTS)
-    for i, arch in enumerate(AVAILABLE_STATE_DICTS):
-        logging.info(f"Executing quality evaluation {i} of {total} for {arch}")
-        runQualityBenchForModel(arch, only_best=only_best)
+        for _, arch in enumerate(AVAILABLE_STATE_DICTS):
+            logging.info(f'###### Running Benchmark for {arch} network. ######')
+            measurements = []
+            for _ in range(0, SPEED_RUNS):
+                measurements.append(
+                    runSpeedBenchForModel(arch, warmup=True)
+                )
+                pbar.update(1)
+            print()
+            print(measurements)
+            print(f'Avg.: {sum(measurements) / len(measurements):.4f}')
+            print()
 
-def runSpeedBenchForModel(arch: str, warmup=False):
-    if not warmup:
-        logging.info(f'###### Running Benchmark for {arch} network. ######')
 
-    start_init = timer()
-    model = getModelWithOptimized(arch)
+def runSpeedBenchForModel(arch: str, warmup=False) -> float:   
+
+    #start_init = timer()
+    model = getModelWithOptimized(arch, n=LAYERS_TO_SKIP)
     #logging.info(f'Time to init {arch} network: {timer() - start_init:.4f} seconds')
 
     model.eval()
     
     bench_input = torch.rand((1, 3, 224 ,224))
-    start_inference = timer()
-    output = model(bench_input)
-    if not warmup:
-        logging.info(f'Time for inferencing {arch} network: {timer() - start_inference:.6f} seconds')
-        logging.info(f'####### Finished run #######')
 
-def runQualityBenchForModel(arch: str, only_best=False)-> None:
+    if warmup:
+        #logging.info(f'##### Running warmup first #####')
+        output = model(bench_input)
+
+    start_inference = timer()
+
+    output = model(bench_input)
+    end_inference = timer()
+    #logging.info(f'Time for inferencing {arch} network: {end_inference - start_inference:.6f} seconds')
+    #logging.info(f'####### Finished run #######')
+
+    return end_inference - start_inference
+
+def executeQualityEvaluation(only_best):
+    total = len(AVAILABLE_STATE_DICTS)
+    for i, arch in enumerate(AVAILABLE_STATE_DICTS):
+        logging.info(f"Executing quality evaluation {i + 1} of {total} for {arch}")
+        runQualityBenchForModel(arch, only_best=only_best)
+
+def runQualityBenchForModel(arch: str, only_best=False, persist_results=False)-> None:
     data_path = 'data/imagenet_full'
     #data_path = 'data/imagenet_red'
 
-    model = getModelWithOptimized(arch)
-    
     arch_states = [d for d in os.listdir(STATE_DICT_PATH) if arch.split("-")[0] in d]
     if only_best:
         arch_states = [d for d in arch_states if 'best' in d]
-
-    model.eval()
+    
     print(arch_states)
 
     _, _, val_loader =  get_zipped_dataloaders(data_path, BATCH_SIZE, use_valid=True)
     with torch.no_grad():
         for state in arch_states:
-            model, _, epoch, prec = resumeFromPath(os.path.join(STATE_DICT_PATH, state), model)
-            logging.info(f"Resuming {state} from epoch {epoch} with best precision {prec}...")
-            classes = getLabelToClassMapping(os.path.join(os.getcwd(), data_path))
+            measurements = []
+            for i in range(0, QUALITY_RUNS):
+                model = getModelWithOptimized(arch, n=LAYERS_TO_SKIP)
+                model.eval()
+                model, _, epoch, prec = resumeFromPath(os.path.join(STATE_DICT_PATH, state), model)
+                #logging.info(f"Resuming {state} from epoch {epoch} with best precision {prec}...")
+                classes = getLabelToClassMapping(os.path.join(os.getcwd(), data_path))
 
-            grndT, pred = evaluateModel(model, val_loader, classes)
-            logging.info(metrics.classification_report(grndT, pred, digits=3))
-            generateAndStoreClassificationReportCSV(grndT, pred, f'{arch}_report.csv')
+                grndT, pred = evaluateModel(model, val_loader, classes)
+                measurements.append(metrics.accuracy_score(grndT, pred))
+                if persist_results:
+                    logging.info(metrics.classification_report(grndT, pred, digits=3))
+                    generateAndStoreClassificationReportCSV(grndT, pred, f'{arch}_report.csv')
+
+            logging.info('')
+            logging.info(measurements)
+            logging.info(f'Precission: {sum(measurements) / len(measurements):.4f}')    
 
 def evaluateModel(model, loader, classes): 
     pred, grndT = [], []
@@ -95,5 +123,7 @@ def evaluateModel(model, loader, classes):
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)    
 
-    executeSpeedBench()
-    #executeQualityEvaluation(True)
+    #executeSpeedBench()
+    executeQualityEvaluation(True)
+    #cProfile.run('executeSpeedBench()')
+    
