@@ -111,7 +111,7 @@ def getModelWithOptimized(arch: str, n=0):
     elif arch == 'densenet121-skip':
         
         dnn121_config = (6, 12, 24, 16)
-        dndrop.setSkipPolicy(dndrop.DNDropRandNPolicy(dnn121_config, 1))
+        dndrop.setSkipPolicy(dndrop.DNDropRandNPolicy(dnn121_config, n))
 
         return tdn.densenet121(num_classes=40, use_skipping=True)
     else:
