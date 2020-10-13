@@ -1,7 +1,7 @@
 import logging
 import random as rd
 import resnet.utils as r_util
-
+from typing import List
 
 class ResnetDropResidualPolicy(object):
     def __init__(self):
@@ -14,16 +14,19 @@ class ResnetDropResidualPolicy(object):
         return True
 
     def setMaxSkipableLayers(self, maxCount: int):
-        logging.info(f"Maximum of skipable Layers: {maxCount}")
         self.maxSkipableLayers = maxCount
 
     def apply(self, residual_func, shortcut_func, x):
         self.layerCount += 1
-        logging.info(f"Called on {self.layerCount}-Layer")
+        #logging.info(f"Called on {self.layerCount}-Layer")
         if self.shouldDrop():
             return shortcut_func(x)
         else:
             return residual_func(x) + shortcut_func(x)
+        
+    def reset(self):
+        self.dropCount = 0
+        self.layerCount = 0
 
 class ResnetDropMaxRandomPolicy(ResnetDropResidualPolicy):
     def __init__(self, max_drop):
@@ -52,17 +55,19 @@ class ResNetDropRandNPolicy(ResnetDropResidualPolicy):
         self.shouldDropLayer = []
 
     def setMaxSkipableLayers(self, maxCount: int):
+        if self._n > maxCount:
+            raise ValueError('Cannot skip more layers than available in this network.')
+
         super().setMaxSkipableLayers(maxCount)
         # random True or False array with max. N-True values
         self.shouldDropLayer = r_util.getRandomBoolListPermutation(maxCount, self._n)
         self._isMaxSet = True
 
     def shouldDrop(self) -> bool:
-        if not self._isMaxSet:
-            raise Exception("Maximum ha not been set beforehand!")
         # check predefined values
-        temp = self.shouldDropLayer[self.dropCount]
-        super().shouldDrop()
-        return temp
-        
+        self.dropCount += 1
+        return self.shouldDropLayer[self.dropCount - 1]
+    
+    def getDropConfig(self)->List[bool]:
+        return self.shouldDropLayer
         

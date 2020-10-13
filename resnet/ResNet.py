@@ -29,7 +29,6 @@ class ResNet(nn.Module):
         
         #we use a different inputsize than the original paper
         #so conv2_x's stride is 1
-        
         self.conv2_x = self._make_layer(block, 64, num_block[0], 1)
         self.conv3_x = self._make_layer(block, 128, num_block[1], 2)
         self.conv4_x = self._make_layer(block, 256, num_block[2], 2)
@@ -76,7 +75,8 @@ class ResNet(nn.Module):
         output = self.avg_pool(output)
         output = output.view(output.size(0), -1)
         output = self.fc(output)
-
+        if self.dropPolicy:
+            self.dropPolicy.reset()
         return output 
 
 # Functions to generate a model with the needed amount of trainable parameters

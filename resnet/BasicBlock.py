@@ -19,6 +19,9 @@ class BasicBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, dropResidualPolicy=None):
         super().__init__()
 
+
+        self.dropPolicy = dropResidualPolicy
+
         #residual function
         self.residual_function = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, bias=False),
@@ -40,4 +43,6 @@ class BasicBlock(nn.Module):
             )
         
     def forward(self, x):
+        if self.dropPolicy and self.dropPolicy.shouldDrop():
+            return nn.ReLU(inplace=True)(self.shortcut(x))
         return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))

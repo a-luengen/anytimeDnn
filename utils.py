@@ -12,6 +12,7 @@ import densenet.densenet as dn
 import densenet.torchDensenet as tdn
 import densenet.DropPolicies as dndrop
 from collections import OrderedDict
+from typing import List
 
 def get_msd_net_model():
     grFact = '1-2-4-4'
@@ -95,18 +96,20 @@ def getClasses(data_path: str):
     return class_list
 
 def getModelWithOptimized(arch: str, n=0):
-    if 'drop-rand-n' in arch:
-        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
-
     if arch == 'resnet18-drop-rand-n':
+        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
         return ResNet.resnet18(use_policy=True)
     elif arch == 'resnet34-drop-rand-n':
+        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
         return ResNet.resnet34(use_policy=True)
     elif arch == 'resnet50-drop-rand-n':
+        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
         return ResNet.resnet50(use_policy=True)
     elif arch == 'resnet101-drop-rand-n':
+        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
         return ResNet.resnet101(use_policy=True)
     elif arch == 'resnet152-drop-rand-n':
+        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
         return ResNet.resnet152(use_policy=True)
     elif arch == 'densenet121-skip':
         

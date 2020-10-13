@@ -3,6 +3,7 @@ import torch
 import torchvision
 from .context import resnet
 from .context import resnet_utils
+from .context import utils
 
 class TestResnetSkippingPolicies(unittest.TestCase):
 
@@ -62,3 +63,34 @@ class TestResnetSkippingPolicies(unittest.TestCase):
 
         test_net = resnet.ResNet.resnet50(use_policy=True)
         test_net.forward(torch.rand(1, 3, 224, 224))
+    
+    def test08_resnet18_withDropRandNPolicy_noException_onForward(self):
+        test_n = 1
+        test_policy = resnet.DropPolicies.ResNetDropRandNPolicy(test_n)
+
+        resnet.ResNet.setDropPolicy(test_policy)
+
+        test_net = resnet.ResNet.resnet18(use_policy=True)
+
+        test_net.forward(torch.rand(1, 3, 224, 224))
+
+        self.assertEqual( sum(test_policy.getDropConfig()) , test_n )
+    
+    def test09_getModelWithOptimized_returnsResNet18_policyIsSet(self):
+        test_n = 3
+        model = utils.getModelWithOptimized('resnet18-drop-rand-n', n=test_n)
+
+        self.assertIsNotNone(model)
+        self.assertIsNotNone(resnet.ResNet.getDropPolicy())
+        self.assertTrue(isinstance(resnet.ResNet.getDropPolicy(), resnet.DropPolicies.ResNetDropRandNPolicy))
+        self.assertEqual(sum(resnet.ResNet.getDropPolicy().getDropConfig()), test_n)
+
+    def test10_resnet18_withDropRandNPolicy_Forward2Times_noException(self):
+        test_n = 3
+
+        model = utils.getModelWithOptimized('resnet18-drop-rand-n', n=test_n)
+
+        test_input = torch.rand(1, 3, 224, 224)
+        model(test_input)
+        model(test_input)
+        pass
