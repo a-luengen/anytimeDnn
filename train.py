@@ -25,15 +25,15 @@ parser = argparse.ArgumentParser(description='Train several image classification
 parser.add_argument('--arch', '-a', metavar='ARCH_NAME', type=str, default='resnet50', 
     choices=ARCH_NAMES, 
     help='Specify which kind of network architecture to train.')
-parser.add_argument('--epoch', '-e', metavar='N', type=int, default=argparse.SUPPRESS, help='Resume training from the given epoch. 0-based from [0..n-1]')
-
+parser.add_argument('--epoch', metavar='N', type=int, default=argparse.SUPPRESS, help='Resume training from the given epoch. 0-based from [0..n-1]')
+parser.add_argument('--batch', metavar='N', type=int, default=argparse.SUPPRESS, help='Batchsize for training or validation run.')
 
 ################################- Constants for Checkpoints -###################################
 # File name containing checkpoint for given architecture: <arch_name>_<EPOCH>_checkpoint.pth.tar
 LAST_CHECKPOINT_EPOCH = 0
 ################################################################################################
 
-IS_DEBUG = False
+IS_DEBUG = True
 DEBUG_ITERATIONS = 40
 STAT_FREQUENCY = 200
 LEARNING_RATE = 0.1
@@ -52,7 +52,7 @@ CHECKPOINT_DIR = 'checkpoints'
 DATA_PATH = "data/imagenet_full"
 # for colab:
 # DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
-BATCH_SIZE = 12
+BATCH_SIZE = 2
 NUM_WORKERS = 1
 
 def main(args):
@@ -96,9 +96,11 @@ def main(args):
     
     cudnn.benchmark = True
     
+    batch_size = BATCH_SIZE if not 'batch' in args else args.batch
+
     train_loader, test_loader, _ = get_zipped_dataloaders(
         os.path.join(os.getcwd(), "data", "imagenet_full"), 
-        BATCH_SIZE, 
+        batch_size, 
         use_valid=True)
 
 
