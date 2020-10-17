@@ -41,7 +41,7 @@ class BottleNeck(nn.Module):
             )
         
     def forward(self, x):
-        if self.dropPolicy:
-            return nn.ReLU(inplace=True)(self.dropPolicy.apply(self.residual_function, self.shortcut, x))
+        if self.dropPolicy and self.dropPolicy.shouldDrop():
+            return nn.ReLU(inplace=True)(self.shortcut(x))
         return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
     
