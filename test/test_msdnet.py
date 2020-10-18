@@ -100,8 +100,15 @@ class TestMSDNet(unittest.TestCase):
 
         stateDict = utils.getStateDict(net, test_epoch, test_arch, test_best_acc, test_optim)
 
+        self.assertIsNotNone(stateDict)
+
         utils.save_checkpoint(stateDict, False, test_arch, self.test_checkpoint_dir)
 
-        net = utils.resumeFromPath(self.test_checkpoint_dir, 'msdnet', test_optim)
+        self.assertTrue(os.path.isdir(self.test_checkpoint_dir))
+        test_checkpoint_file_path = os.path.join(self.test_checkpoint_dir, f'{test_arch}_{test_epoch}_checkpoint.pth.tar')
+        
+        self.assertTrue(os.path.isfile(test_checkpoint_file_path))
+
+        net = utils.resumeFromPath(test_checkpoint_file_path, net, test_optim)
 
         
