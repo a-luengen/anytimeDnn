@@ -19,8 +19,7 @@ from utils import *
 from data.ImagenetDataset import get_zipped_dataloaders, REDUCED_SET_PATH, FULL_SET_PATH
 
 RUN_PATH = 'runs/'
-DATA_PATH = REDUCED_SET_PATH
-IS_DEBUG = True
+DATA_PATH = FULL_SET_PATH
 DEBUG_ITERATIONS = 3
 STAT_FREQUENCY = 200
 LEARNING_RATE = 0.1
@@ -43,7 +42,8 @@ parser.add_argument('--arch', '-a', metavar='ARCH_NAME', type=str, default='msdn
     help='Specify which kind of network architecture to train.')
 parser.add_argument('--epoch', metavar='N', type=int, default=argparse.SUPPRESS, help='Resume training from the given epoch. 0-based from [0..n-1]')
 parser.add_argument('--batch', metavar='N', type=int, default=argparse.SUPPRESS, help='Batchsize for training or validation run.')
-
+parser.add_argument('--debug', dest='debug', action='store_true')
+parser.set_defaults(feature=False)
 
 def AddMSDNetArguments(args):
     growFactor = list(map(int, "1-2-4-4".split("-")))
@@ -133,6 +133,13 @@ def main(args):
         logging.info(f"Started Epoch{epoch + 1}/{EPOCHS}")
         # train()
         train_loss, train_prec1, train_prec5, lr = train(train_loader, model, criterion, optimizer, scheduler, epoch)
+        logging.info('******** Train result: *********')
+        logging.info(
+            f'Train - Epoch: [{epoch}]\t'
+            f'Loss {train_loss:.4f}\t'
+            f'Acc@1 {train_prec1:.4f}\t'
+            f'Acc@5 {train_prec5:.4f}\t'
+            f'LR {lr}\t')
         # validate()
         val_loss, val_prec1, val_prec5 = validate(val_loader, model, criterion)
         scheduler.step()
@@ -196,14 +203,14 @@ def validate(val_loader, model, criterion):
             
             if i % args.print_freq == 0:
                 logging.info(f'Val - Epoch: [{i+1}/{len(val_loader)}]\t'
-                      f'Time {batch_time.avg:.3f}\t'
-                      f'Data {data_time.avg:.3f}\t'
+                      f'Time {batch_time.avg:.4f}\t'
+                      f'Data {data_time.avg:.4f}\t'
                       f'Loss {losses.val:.4f}\t'
                       f'Acc@1 {top1[-1].val:.4f}\t'
                       f'Acc@5 {top5[-1].val:.4f}')
             end = time.time()
             
-            if IS_DEBUG and i == DEBUG_ITERATIONS:
+            if args.debug and i == DEBUG_ITERATIONS:
                 return losses.avg, top1[-1].avg, top5[-1].avg
 
     for j in range(args.nBlocks):
@@ -269,7 +276,7 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
                 f'Acc@1 {top1[-1].val:.4f}\t'
                 f'Acc@5 {top5[-1].val:.4f}')
 
-        if IS_DEBUG and i == DEBUG_ITERATIONS:
+        if args.debug and i == DEBUG_ITERATIONS:
             return losses.avg, top1[-1].avg, top5[-1].avg, running_lr
 
     return losses.avg, top1[-1].avg, top5[-1].avg, running_lr
@@ -324,12 +331,14 @@ def load_checkpoint(args):
     logging.info("=> loaded checkpoint '{}'".format(model_filename))
     return state
 
-
-
 if __name__ == '__main__':
     args = parser.parse_args()
     
     AddMSDNetArguments(args)
+
+    if args.debug:
+        logging.info("###### Debug run! ########")
+        args.data_root = REDUCED_SET_PATH
 
     curTime = datetime.datetime.now()
     #log_level = logging.INFO
