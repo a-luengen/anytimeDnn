@@ -138,3 +138,19 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
             res_plain = plain_net(img)
 
             self.assertTrue(torch.equal(res_skip, res_plain))
+        
+    def test080_DNDropLastNPolicy_hasOnlyLastBlockConfigEntries_setToTrue(self):
+        test_block_config = (5, 3, 2)
+        test_n = 5
+
+        policy_under_test = densenet.DropPolicies.DNDropLastNPolicy(test_block_config, test_n)
+
+        res_full_config = policy_under_test.getFullConfig()
+
+        exp_full_config = [sorted(x) for x in res_full_config]
+        temp = []
+        for ls in res_full_config:
+            temp += ls
+
+        self.assertEqual(sum(temp), test_n)
+        self.assertEqual(exp_full_config, res_full_config)

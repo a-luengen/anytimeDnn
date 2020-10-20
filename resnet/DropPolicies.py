@@ -70,4 +70,17 @@ class ResNetDropRandNPolicy(ResnetDropResidualPolicy):
     
     def getDropConfig(self)->List[bool]:
         return self.shouldDropLayer
+
+class ResNetDropRandLastNPolicy(ResNetDropRandNPolicy):
+
+    def __init__(self, n):
+        super(ResNetDropRandLastNPolicy, self).__init__(n)
+    
+    def setMaxSkipableLayers(self, maxCount: int):        
+        super().setMaxSkipableLayers(maxCount)
+
+        self.shouldDropLayer = sorted(r_util.getRandomBoolListPermutation(maxCount, self._n))
+
+
+
         

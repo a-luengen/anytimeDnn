@@ -94,3 +94,34 @@ class TestResnetSkippingPolicies(unittest.TestCase):
         model(test_input)
         model(test_input)
         pass
+
+    def test020_resnetDropLastRandNLayers_hasCorrectAmountOfTrueValuesInConfig(self):
+
+        test_n = 4
+        test_max_layers = 10
+
+        policy = resnet.DropPolicies.ResNetDropRandLastNPolicy(test_n)
+        policy.setMaxSkipableLayers(test_max_layers)
+
+        config_list = policy.getDropConfig()
+
+        self.assertEqual(test_n, sum(config_list))
+    
+    def test030_resnetDropLastRandNLayers_hasOnlyLastLayersSetToTrue(self):
+
+        test_n = 4
+        test_max_layers = 10
+
+        policy = resnet.DropPolicies.ResNetDropRandLastNPolicy(test_n)
+
+        policy.setMaxSkipableLayers(test_max_layers)
+
+        config_list = policy.getDropConfig()
+
+        false_list = config_list[0:test_max_layers - 4]
+        true_list = config_list[test_max_layers - 4:test_max_layers]
+
+        self.assertEqual(sum(false_list), 0)
+        self.assertEqual(len(false_list), test_max_layers - 4)
+        self.assertEqual(sum(true_list), test_n)
+        self.assertEqual(len(true_list), test_n)

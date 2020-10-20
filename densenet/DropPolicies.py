@@ -9,7 +9,6 @@ class DenseNetDropPolicy(object):
     
     def getDropLayerConfiguration(self, layer_id: int):
         raise NotImplementedError("Function should be called from within its child classes.")
-        #return self.block_layer_config[layer_id]
     
     def getFullConfig(self):
         return self.block_layer_config
@@ -40,6 +39,35 @@ class DNDropRandNPolicy(DenseNetDropPolicy):
     def getDropLayerConfiguration(self, layer_id: int):
         return self.block_layer_config[layer_id]
 
+class DNDropLastNPolicy(DenseNetDropPolicy):
+    """
+        Randomly drops n-Layers within a Block, by only choosing the last 
+        Layer from Blocks.
+    """
+
+    def __init__(self, block_config, n:int):
+        super(DNDropLastNPolicy, self).__init__(block_config)
+        max_layers = sum(block_config)
+
+        if n > max_layers:
+            raise ValueError('Value for n is to heigh. Cannot drop more Layers than possible.')
+        
+        self._n = n
+
+        temp_perm = getRandomBoolListPermutation(max_layers, n)
+        
+        prev_val = 0
+        temp_split = []
+        for i in block_config:
+            temp_split.append((prev_val, prev_val + i))
+            prev_val += i
+        
+        self.block_layer_config = [temp_perm[i:j].tolist() for i, j in temp_split]
+        self.block_layer_config = [sorted(x) for x in self.block_layer_config]
+
+    def getDropLayerConfiguration(self, layer_id: int):
+        return self.block_layer_config[layer_id]
+        
 def setSkipPolicy(policy):
     SKIP_POLICY['policy'] = policy
 
