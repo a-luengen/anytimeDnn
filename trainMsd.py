@@ -1,305 +1,183 @@
-#!/usr/bin/env python3
-
-from __future__ import print_function
-from __future__ import division
-from __future__ import absolute_import
+import os
+import sys
+import time
+import logging
+import datetime
+import argparse
+import traceback
+import math
 
 import torch
 import torch.nn as nn
 import torch.nn.parallel
-from torchsummary import summary
-from torch.utils.data import DataLoader
-import torch.backends.cudnn as cudnn
 import torch.optim
+import torch.backends.cudnn as cudnn
 
-
-from msdnet.dataloader import get_dataloaders_alt, get_dataloaders
-from msdnet.args import arg_parser
-from msdnet.adaptive_inference import dynamic_evaluate
-import msdnet.models as models
-from msdnet.op_counter import measure_model
-
-import os
-import shutil
-import time
-import datetime
-import sys
-import logging
-import math
+import msdnet.models
 
 from utils import *
+from data.ImagenetDataset import get_zipped_dataloaders, REDUCED_SET_PATH, FULL_SET_PATH
 
+RUN_PATH = 'runs/'
+DATA_PATH = REDUCED_SET_PATH
 IS_DEBUG = True
-DEBUG_ITERATIONS = 40
-
-STAT_FREQUENCY = 20
+DEBUG_ITERATIONS = 3
+STAT_FREQUENCY = 200
 LEARNING_RATE = 0.1
 MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-4
 GPU_ID = None
 START_EPOCH = 0
-EPOCHS = 90
-CHECKPOINT_INTERVALL = 30
+EPOCHS = 2
+CHECKPOINT_INTERVALL = 4 
 CHECKPOINT_DIR = 'checkpoints'
-ARCH = 'msdnet'
+
+LOG_FLOAT_PRECISION = ':6.4f'
+BATCH_SIZE = 8
 
 ARCH_NAMES = ['msdnet']
 
-# for repo:
-#DATA_PATH = "data/imagenet_images"
-# for colab:
-DATA_PATH = "drive/My Drive/reducedAnytimeDnn/data/imagenet_images"
-BATCH_SIZE = 18
-NUM_WORKERS = 1
-
-class Object(object):
-  pass
-
-args = None
-
-try: 
-  args = arg_parser.parse_args()
-except:
-  args = Object()
-  args_dict = {
-      'gpu': 'gpu:0',
-      'use_valid': True,
-      'data': 'ImageNet',
-      'save': os.path.join(os.getcwd(), 'save'),
-      'evalmode': None,
-      'start_epoch': START_EPOCH,
-      'epochs': EPOCHS,
-      'arch': 'msdnet',
-      'seed': 42,
-
-      'grFactor': "1-2-4-4",
-      'bnFactor': "1-2-4-4",
-      'nBlocks': 3,
-      'reduction': 0.5,
-      'bottleneck': True,
-      'prune': 'max',
-      'growthRate': 16,
-      'base': 4,
-      'step': 4,
-      'stepmode': 'even',
-      
-      'lr': LEARNING_RATE,
-      'lr_type': 'multistep',
-      'momentum': MOMENTUM,
-      'weight_decay': WEIGHT_DECAY,
-      'resume': False,
-      'data_root': DATA_PATH,
-      'batch_size': BATCH_SIZE,
-      'workers': 4,
-      'print_freq': STAT_FREQUENCY
-  } 
-
-  for key in args_dict:
-    setattr(args, key, args_dict[key])
-    #print(getattr(args, key))
+parser = argparse.ArgumentParser(description='Train several image classification network architectures.')
+parser.add_argument('--arch', '-a', metavar='ARCH_NAME', type=str, default='msdnet', 
+    choices=ARCH_NAMES, 
+    help='Specify which kind of network architecture to train.')
+parser.add_argument('--epoch', metavar='N', type=int, default=argparse.SUPPRESS, help='Resume training from the given epoch. 0-based from [0..n-1]')
+parser.add_argument('--batch', metavar='N', type=int, default=argparse.SUPPRESS, help='Batchsize for training or validation run.')
 
 
-if args.gpu:
-    os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
+def AddMSDNetArguments(args):
+    growFactor = list(map(int, "1-2-4-4".split("-")))
+    bnFactor = list(map(int, "1-2-4-4".split("-")))
 
-args.grFactor = list(map(int, args.grFactor.split('-')))
-args.bnFactor = list(map(int, args.bnFactor.split('-')))
-args.nScales = len(args.grFactor)
+    args_dict = {
+        'gpu': 'gpu:0',
+        'use_valid': True,
+        'data': 'ImageNet',
+        'save': os.path.join(os.getcwd(), 'save'),
+        'evalmode': None,
+        'start_epoch': START_EPOCH,
+        'epochs': EPOCHS,
+        'arch': 'msdnet',
+        'seed': 42,
+        'test_interval': 10,
 
-if args.use_valid:
-    args.splits = ['train', 'val', 'test']
-else:
-    args.splits = ['train', 'val']
+        'grFactor': growFactor,
+        'bnFactor': bnFactor,
+        'nBlocks': 5,
+        'nChannels': 32,
+        'nScales': len(growFactor),
+        'reduction': 0.5,
+        'bottleneck': True,
+        'prune': 'max',
+        'growthRate': 16,
+        'base': 4,
+        'step': 4,
+        'stepmode': 'even',
+        
+        'lr': LEARNING_RATE,
+        'lr_type': 'multistep',
+        'momentum': MOMENTUM,
+        'weight_decay': WEIGHT_DECAY,
+        'resume': False,
+        'data_root': DATA_PATH,
+        'batch_size': BATCH_SIZE,
+        'workers': 1,
+        'print_freq': STAT_FREQUENCY
+    } 
 
-if args.data == 'cifar10':
-    args.num_classes = 10
-elif args.data == 'cifar100':
-    args.num_classes = 100
-else:
-    args.num_classes = 40
+    for key in args_dict:
+        setattr(args, key, args_dict[key])
+        #print(getattr(args, key))
 
-torch.manual_seed(args.seed)
+def main(args):
 
-def main():
+    torch.cuda.empty_cache()
+
+    n_gpus_per_node = torch.cuda.device_count()
+    logging.info(f"Found {n_gpus_per_node} GPU(-s)")
+
+
+    # MAIN LOOP
+    #model = get_msd_net_model()
+    model = msdnet.models.msdnet(args)
+
+    criterion = nn.CrossEntropyLoss()
+
+    if torch.cuda.is_available():
+        logging.debug("Cuda is available.")
+        logging.info("Using all available GPUs")
+        for i in range(torch.cuda.device_count()):
+            logging.info(f"gpu:{i} - {torch.cuda.get_device_name(i)}")
+        model = nn.DataParallel(model).cuda()
+        logging.info("Moving criterion to device.")
+        criterion = criterion.cuda()
+        cudnn.benchmark = True
+    else:
+        logging.info("Using slow CPU training.")
+
+
+    optimizer = torch.optim.SGD(model.parameters(),
+                                    args.lr,
+                                    momentum=args.momentum,
+                                    weight_decay=args.weight_decay)
+
+    calc_lr = lambda epoch: epoch // 30
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=calc_lr)
+
+    train_loader, val_loader, test_loader = get_zipped_dataloaders(args.data_root, args.batch_size, use_valid=True)
 
     best_prec1, best_epoch = 0.0, 0
 
-    if not os.path.exists(args.save):
-        os.makedirs(args.save)
 
-    if args.data.startswith('cifar'):
-        IM_SIZE = 32
-    else:
-        IM_SIZE = 224
-
-    #model = getattr(models, args.arch)(args)
-    #n_flops, n_params = measure_model(model, IM_SIZE, IM_SIZE)    
-    #torch.save(n_flops, os.path.join(args.save, 'flops.pth'))
-    #del(model)
-        
-    
-    model = get_msd_net_model() #getattr(models, args.arch)(args)
-
-    if args.arch.startswith('alexnet') or args.arch.startswith('vgg'):
-        model.features = torch.nn.DataParallel(model.features)
-        model.cuda()
-    elif torch.cuda.is_available():
-        model = torch.nn.DataParallel(model).cuda()
-    print("Print 2")
-    criterion = nn.CrossEntropyLoss()
-    if torch.cuda.is_available():
-        criterion = criterion.cuda()
-
-    optimizer = torch.optim.SGD(model.parameters(), args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay)
-    print("Print 3")
-    if args.resume:
-        checkpoint = load_checkpoint(args)
-        if checkpoint is not None:
-            args.start_epoch = checkpoint['epoch'] + 1
-            best_prec1 = checkpoint['best_prec1']
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-    print("Print 4")
-    cudnn.benchmark = True
-
-    temp = vars(args)
-    for item in temp:
-        print(item, ':', temp[item])
-    train_loader, val_loader, test_loader = get_dataloaders(args)
-    print("Print 5")
-    if args.evalmode is not None:
-        state_dict = torch.load(args.evaluate_from)['state_dict']
-        model.load_state_dict(state_dict)
-
-        if args.evalmode == 'anytime':
-            validate(test_loader, model, criterion)
-        else:
-            dynamic_evaluate(model, test_loader, val_loader, args)
-        return
-    print("Print 1")
-    scores = ['epoch\tlr\ttrain_loss\tval_loss\ttrain_prec1'
-              '\tval_prec1\ttrain_prec5\tval_prec5']
-
-    for epoch in range(args.start_epoch, args.epochs):
-
-        train_loss, train_prec1, train_prec5, lr = train(train_loader, model, criterion, optimizer, epoch)
-
+    for epoch in range(EPOCHS):
+        logging.info(f"Started Epoch{epoch + 1}/{EPOCHS}")
+        # train()
+        train_loss, train_prec1, train_prec5, lr = train(train_loader, model, criterion, optimizer, scheduler, epoch)
+        # validate()
         val_loss, val_prec1, val_prec5 = validate(val_loader, model, criterion)
-
-        scores.append(('{}\t{:.3f}' + '\t{:.4f}' * 6)
-                      .format(epoch, lr, train_loss, val_loss,
-                              train_prec1, val_prec1, train_prec5, val_prec5))
+        scheduler.step()
 
         is_best = val_prec1 > best_prec1
         if is_best:
             best_prec1 = val_prec1
             best_epoch = epoch
-            logging.info(f'Best var_prec1 {best_prec1}')
+            logging.info(f'Best val_prec1 {best_prec1}')
+        
+        if is_best or epoch % CHECKPOINT_INTERVALL == 0:
+            save_checkpoint(getStateDict(model, epoch, 'msdnet', best_prec1, optimizer),
+                            is_best, 
+                            'msdnet', 
+                            CHECKPOINT_DIR)
 
-        model_filename = 'checkpoint_%03d.pth.tar' % epoch
-        save_checkpoint({
-            'epoch': epoch,
-            'arch': args.arch,
-            'state_dict': model.state_dict(),
-            'best_prec1': best_prec1,
-            'optimizer': optimizer.state_dict(),
-        }, args, is_best, model_filename, scores)
+        if epoch % args.test_interval == 0:
+            avg_loss, avg_top1, avg_top5 = validate(test_loader, model, criterion)
+
 
     logging.info(f'Best val_prec1: {best_prec1:.4f} at epoch {best_epoch}')
 
-    ### Test the final model
-
-    logging.info('********** Final prediction results **********')
+    logging.info('*************** Final prediction results ***************')
     validate(test_loader, model, criterion)
 
-    return 
-
-def train(train_loader, model, criterion, optimizer, epoch):
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
-    losses = AverageMeter()
-    top1, top5 = [], []
-    for i in range(args.nBlocks):
-        top1.append(AverageMeter())
-        top5.append(AverageMeter())
-
-    # switch to train mode
-    model.train()
-
-    end = time.time()
-
-    running_lr = None
-    for i, (input, target) in enumerate(train_loader):
-        lr = adjust_learning_rate(optimizer, epoch, args, batch=i,
-                                  nBatch=len(train_loader), method=args.lr_type)
-        if running_lr is None:
-            running_lr = lr
-
-        data_time.update(time.time() - end)
-
-        target = target.cuda(non_blocking=True)
-        #input_var = torch.autograd.Variable(input)
-        #target_var = torch.autograd.Variable(target)
-
-        output = model(input)
-        if not isinstance(output, list):
-            output = [output]
-
-        loss = 0.0
-        for j in range(len(output)):
-            loss += criterion(output[j], target)
-
-        losses.update(loss.item(), input.size(0))
-
-        for j in range(len(output)):
-            prec1, prec5 = accuracy(output[j].data, target, topk=(1, 5))
-            top1[j].update(prec1.item(), input.size(0))
-            top5[j].update(prec5.item(), input.size(0))
-
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-        if i % args.print_freq == 0:
-            logging.info(
-                f'Epoch: [{epoch}][{i + 1}/{len(train_loader)}]\t'
-                f'Time {batch_time.avg:.3f}\t'
-                f'Data {data_time.avg:.3f}\t'
-                f'Loss {losses.val:.4f}\t'
-                f'Acc@1 {top1[-1].val:.4f}\t'
-                f'Acc@5 {top5[-1].val:.4f}')
-
-    return losses.avg, top1[-1].avg, top5[-1].avg, running_lr
-
 def validate(val_loader, model, criterion):
-    batch_time = AverageMeter()
-    losses = AverageMeter()
-    data_time = AverageMeter()
+    batch_time = AverageMeter('Batch Time', LOG_FLOAT_PRECISION)
+    losses = AverageMeter('Loss', LOG_FLOAT_PRECISION)
+    data_time = AverageMeter('Data Time', LOG_FLOAT_PRECISION)
     top1, top5 = [], []
     for i in range(args.nBlocks):
-        top1.append(AverageMeter())
-        top5.append(AverageMeter())
+        top1.append(AverageMeter(f'Top1-{i+1}', LOG_FLOAT_PRECISION))
+        top5.append(AverageMeter(f'Top1-{i+1}', LOG_FLOAT_PRECISION))
 
     model.eval()
-
-    end = time.time()
     with torch.no_grad():
-        for i, (input, target) in enumerate(val_loader):
-            target = target.cuda(non_blocking=True)
-            input = input.cuda()
-
-            #input_var = torch.autograd.Variable(input)
-            #target_var = torch.autograd.Variable(target)
-
+        end = time.time()
+        for i, (img, target) in enumerate(val_loader):
+            if torch.cuda.is_available():
+                img = img.cuda(non_blocking=True)
+                target = target.cuda(non_blocking=True)
+            
             data_time.update(time.time() - end)
 
-            output = model(input)
+            output = model(img)
             if not isinstance(output, list):
                 output = [output]
 
@@ -307,28 +185,94 @@ def validate(val_loader, model, criterion):
             for j in range(len(output)):
                 loss += criterion(output[j], target)
 
-            losses.update(loss.item(), input.size(0))
+            losses.update(loss.item(), img.size(0))
 
             for j in range(len(output)):
-                prec1, prec5 = accuracy(output[j].data, target, topk=(1, 5))
-                top1[j].update(prec1.item(), input.size(0))
-                top5[j].update(prec5.item(), input.size(0))
+                prec1, prec5 = accuracy(output[j].data, target, topk=(1,5))
+                top1[j].update(prec1.item(), img.size(0))
+                top5[j].update(prec5.item(), img.size(0))
 
-            # measure elapsed time
             batch_time.update(time.time() - end)
-            end = time.time()
-
+            
             if i % args.print_freq == 0:
-                logging.info(f'Epoch: [{i+1}/{len(val_loader)}]\t'
+                logging.info(f'Val - Epoch: [{i+1}/{len(val_loader)}]\t'
                       f'Time {batch_time.avg:.3f}\t'
                       f'Data {data_time.avg:.3f}\t'
                       f'Loss {losses.val:.4f}\t'
                       f'Acc@1 {top1[-1].val:.4f}\t'
                       f'Acc@5 {top5[-1].val:.4f}')
+            end = time.time()
+            
+            if IS_DEBUG and i == DEBUG_ITERATIONS:
+                return losses.avg, top1[-1].avg, top5[-1].avg
+
     for j in range(args.nBlocks):
-        logging.info(f' * prec@1 {top1[j].avg:.3f} prec@5 {top5[j].avg:.3f}')
-    # logging.info(' * prec@1 {top1.avg:.3f} prec@5 {top5.avg:.3f}'.format(top1=top1[-1], top5=top5[-1]))
+        logging.info(f'Validation: prec@1 {top1[j].avg:.3f} prec@5 {top5[j].avg:.3f}')
+    logging.info(f'Final Validation: prec@1 {top1[-1].avg:.3f} prec@5 {top5[-1].avg:.3f}')
+    
     return losses.avg, top1[-1].avg, top5[-1].avg
+
+def train(train_loader, model, criterion, optimizer, scheduler, epoch):
+    batch_time = AverageMeter('Batch Time', LOG_FLOAT_PRECISION)
+    data_time = AverageMeter('Data Time', LOG_FLOAT_PRECISION)
+    losses = AverageMeter('Loss', LOG_FLOAT_PRECISION)
+    top1, top5 = [],[]
+
+    for i in range(args.nBlocks):
+        top1.append(AverageMeter(f'Top1-{i+1}', LOG_FLOAT_PRECISION))
+        top5.append(AverageMeter(f'Top5-{i+1}', LOG_FLOAT_PRECISION))
+    
+    model.train()
+    end = time.time()
+
+    running_lr = scheduler.get_last_lr()
+
+    for i, data in enumerate(train_loader):
+        
+        data_time.update(time.time() - end)
+        
+        image, target = data
+
+        if torch.cuda.is_available():
+            image = image.cuda(non_blocking=True)
+            target = target.cuda(non_blocking=True)
+                # time it takes to load data
+
+        output = model(image)
+        if not isinstance(output, list):
+            output = [output]
+
+        loss = 0.0
+        for j in range(len(output)):
+            loss += criterion(output[j], target)
+        
+        losses.update(loss.item(), image.size(0))
+
+        for j in range(len(output)):
+            prec1, prec5 = accuracy(output[j].data, target, topk=(1, 5))
+            top1[j].update(prec1.item(), image.size(0))
+            top5[j].update(prec5.item(), image.size(0))
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        if i % args.print_freq == 0:
+            logging.info(
+                f'Train - Epoch: [{epoch}][{i + 1}/{len(train_loader)}]\t'
+                f'Time {batch_time.avg:.3f}\t'
+                f'Data {data_time.avg:.3f}\t'
+                f'Loss {losses.val:.4f}\t'
+                f'Acc@1 {top1[-1].val:.4f}\t'
+                f'Acc@5 {top5[-1].val:.4f}')
+
+        if IS_DEBUG and i == DEBUG_ITERATIONS:
+            return losses.avg, top1[-1].avg, top5[-1].avg, running_lr
+
+    return losses.avg, top1[-1].avg, top5[-1].avg, running_lr
 
 def adjust_learning_rate(optimizer, epoch, args, batch=None,
                          nBatch=None, method='multistep'):
@@ -350,19 +294,22 @@ def adjust_learning_rate(optimizer, epoch, args, batch=None,
     return lr
   
 def accuracy(output, target, topk=(1,)):
-    """Computes the precor@k for the specified values of k"""
-    maxk = max(topk)
-    batch_size = target.size(0)
+    """Computes accuracy over the k top predictions for the values of k"""
+    
+    # reduce memory consumption on following calculations
+    with torch.no_grad():
+        maxk = max(topk)
+        batch_size = target.size(0)
+        
+        _, pred = output.topk(maxk, 1, True, True)
+        pred = pred.t()
+        correct = pred.eq(target.view(1, -1).expand_as(pred))
 
-    _, pred = output.topk(maxk, 1, True, True)
-    pred = pred.t()
-    correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-    res = []
-    for k in topk:
-        correct_k = correct[:k].view(-1).float().sum(0)
-        res.append(correct_k.mul_(100.0 / batch_size))
-    return res
+        res = []
+        for k in topk:
+            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+            res.append(correct_k.mul_(100.0 / batch_size))
+        return res
 
 def load_checkpoint(args):
     model_dir = os.path.join(args.save, 'save_models')
@@ -377,55 +324,27 @@ def load_checkpoint(args):
     logging.info("=> loaded checkpoint '{}'".format(model_filename))
     return state
 
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-
-def save_checkpoint(state, args, is_best, filename, result):
-    logging.info(args)
-    result_filename = os.path.join(args.save, 'scores.tsv')
-    model_dir = os.path.join(args.save, 'save_models')
-    latest_filename = os.path.join(model_dir, 'latest.txt')
-    model_filename = os.path.join(model_dir, filename)
-    best_filename = os.path.join(model_dir, 'model_best.pth.tar')
-    os.makedirs(args.save, exist_ok=True)
-    os.makedirs(model_dir, exist_ok=True)
-    logging.info(f'=> saving checkpoint {model_filename}')
-
-    torch.save(state, model_filename)
-
-    with open(result_filename, 'w') as f:
-        print('\n'.join(result), file=f)
-
-    with open(latest_filename, 'w') as fout:
-        fout.write(model_filename)
-    if is_best:
-        shutil.copyfile(model_filename, best_filename)
-
-    logging.info(f"=> saved checkpoint '{model_filename}'")
-    return
 
 
 if __name__ == '__main__':
+    args = parser.parse_args()
+    
+    AddMSDNetArguments(args)
+
     curTime = datetime.datetime.now()
     #log_level = logging.INFO
     #if IS_DEBUG:
     log_level = logging.DEBUG
 
-    #logging.basicConfig(filename=str(curTime) + ".log", level=log_level)
-    logging.basicConfig(level=log_level)
-    main()
+    logging.basicConfig(filename=str(curTime) + ".log", level=log_level)
+    #logging.basicConfig(level=log_level)
+
+    try:
+        main(args)
+    except Exception as e:
+        torch.cuda.empty_cache()
+        print("Oh no! Bad things happened...")
+        print(e)
+        traceback.print_exc()
+    finally:
+        torch.cuda.empty_cache()
