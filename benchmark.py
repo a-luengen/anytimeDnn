@@ -17,6 +17,7 @@ parser = argparse.ArgumentParser(description='Train several image classification
 parser.add_argument('--batch_size', metavar='N', type=int, default=argparse.SUPPRESS, help='Batchsize for training or validation run.')
 parser.add_argument('--runs', metavar='N', type=int, default=30, help='Number of runs to collect data for each item to benchmark.')
 parser.add_argument('--only_arch', type=str, default=None, choices=['resnet', 'densenet'], help='Only benchmark architectures as specified by given string.')
+parser.add_argument('--bench_type', type=str, default=None, choices=['quality', 'speed'], help='Execute only the specfied benchmark type.')
 
 def evaluateModel(model, loader, classes, batch_size): 
     pred, grndT = [], []
@@ -39,7 +40,7 @@ def executeQualityBench(arch_name: str, loader, skip_n: int, classes, batch_size
     return acc, prec, rec, f1
 
 def executeSpeedBench(arch_name:str, skip_n:int):
-    model = getModelWithOptimized(arch_name, n=skip_n)
+    model = getModelWithOptimized(arch_name, n=skip_n, batch_size=1)
     model.eval()
 
     bench_input = torch.rand((1, 3, 224, 224))
@@ -134,7 +135,6 @@ if __name__ == "__main__":
     
     args = parser.parse_args()
 
-
     architectures = densenet_archs + resnet_archs
     
     if 'only_arch' in args:
@@ -156,6 +156,13 @@ if __name__ == "__main__":
 
     skip_layers_values = [1, 2, 3, 4, 8, 16, 32]
     bench_types = ['quality', 'speed']
+
+    if args.bench_type is not None:
+        if args.bench_type == 'quality':
+            bench_types = ['quality']
+        if args.bench_type == 'speed':
+            bench_types = ['speed']
+
     runs = 10
 
     args.architectures = architectures
