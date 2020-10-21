@@ -10,6 +10,16 @@ from torch import Tensor
 
 from .DropPolicies import getSkipPolicy, DenseNetDropPolicy
 
+BATCH = {
+    'size': 1
+}
+
+def setGlobalBatchSize(size: int):
+    BATCH['size'] = size
+
+def getGlobalBatchSize() -> int:
+    return BATCH['size'] 
+
 __all__ = ['DenseNet', 'densenet121', 'densenet169', 'densenet201', 'densenet161']
 
 model_urls = {
@@ -99,11 +109,12 @@ class _DenseBlockWithSkip(nn.ModuleDict):
         else:
             self.layer_skip_config = layer_skip_config
 
+        batch_size = getGlobalBatchSize()
         self.layer_tensor_replacement = dict([
-            (56, torch.zeros(1, growth_rate, 56, 56)),
-            (28, torch.zeros(1, growth_rate, 28, 28)),
-            (14, torch.zeros(1, growth_rate, 14, 14)),
-            (7, torch.zeros(1, growth_rate, 7, 7))
+            (56, torch.zeros(batch_size, growth_rate, 56, 56)),
+            (28, torch.zeros(batch_size, growth_rate, 28, 28)),
+            (14, torch.zeros(batch_size, growth_rate, 14, 14)),
+            (7, torch.zeros(batch_size, growth_rate, 7, 7))
         ])
 
 
@@ -137,7 +148,7 @@ class _DenseBlockWithSkip(nn.ModuleDict):
                 #print(f"Skipping layer {i+1}")
 
                 #print(f"Replacing with {replacement.shape}")
-                features.append(replacement)
+                features.append(replacement[0:init_features.shape[0]])
                 continue
             #print(f"Before passthrough: {len(features)}")
             new_features = layer(features)
@@ -147,6 +158,8 @@ class _DenseBlockWithSkip(nn.ModuleDict):
             #print(f"New appended features: {len(features)}")
             #prev_features = new_features
         #print(f"Resulting forwardpass shape: {cattenated.shape}")
+        #for feat in features:
+        #    print(feat.shape)
         return torch.cat(features, 1)
 
 class _DenseBlock(nn.ModuleDict):

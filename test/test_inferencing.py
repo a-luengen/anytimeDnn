@@ -1,7 +1,7 @@
 import unittest 
 import torch
 import torch.nn as nn
-from utils import getModel
+from utils import getModel, getModelWithOptimized
 from msdnet.dataloader import get_dataloaders_alt
 from data.ImagenetDataset import get_zipped_dataloaders
 import os
@@ -59,3 +59,16 @@ class TestInferencing(unittest.TestCase):
         self.assertEqual(len(label_to_class_val), len(label_to_class))
         self.assertEqual(label_to_class_val, label_to_class)
 
+    def test040_DenseNetWithDNDropLastNPolicy_NoExcpetion_OnForwardingWithBatchSize(self):
+        test_batch_size = 8
+        test_loader, _ , _ = get_zipped_dataloaders(self.TEST_DATASET_PATH, test_batch_size)
+
+        img, _ = next(iter(test_loader))
+
+        test_net = getModelWithOptimized('densenet121-skip-last', 3, test_batch_size)
+
+        with torch.no_grad():
+            output = test_net(img)
+
+            self.assertIsNotNone(output)
+            self.assertEqual(img.shape[0], test_batch_size)

@@ -31,7 +31,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         self.assertEqual(sum(num_param_1), sum(num_param_2))
 
     def test020_densenet121_withSkipping_sameParameterAmount(self):
-        skipnet = utils.getModelWithOptimized('densenet121-skip')
+        skipnet = utils.getModelWithOptimized('densenet121-skip', 1, 1)
         num_param = self.getParameterCountList(skipnet)
 
         torch_model = torchvision.models.densenet121(num_classes=40)
@@ -40,7 +40,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         self.assertEqual(sum(num_param), sum(num_param2))
     
     def test030_densenet121_withSkipping_noExceptionOnForward(self):
-        skipnet = utils.getModelWithOptimized('densenet121-skip')
+        skipnet = utils.getModelWithOptimized('densenet121-skip', 1, 1)
         test_t = torch.rand(1, 3, 224, 224)
         skipnet(test_t)
         pass
@@ -154,3 +154,53 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
 
         self.assertEqual(sum(temp), test_n)
         self.assertEqual(exp_full_config, res_full_config)
+    
+    def test090_DenseNet169_WithDNDropLastNPolicy_NoExceptionOnForward(self):
+        test_n = 3
+        test_batch = 8
+
+        test_net = utils.getModelWithOptimized('densenet169-skip-last', test_n, test_batch)
+
+        test_tensor = torch.rand(test_batch, 3, 224, 224)
+
+        output = test_net(test_tensor)
+
+        self.assertIsNotNone(output)
+        self.assertEqual(output.shape[0], test_batch)
+    
+    def test100_DenseNet169_WithDNDropLastNPolicy_MaximumN_NoExceptionOnForward(self):
+        max_n = 72
+        test_batch = 8
+        
+        test_net = utils.getModelWithOptimized('densenet169-skip-last', max_n, test_batch)
+
+        test_tensor = torch.rand(test_batch, 3, 224, 224)
+
+        output = test_net(test_tensor)
+
+        self.assertIsNotNone(output)
+        self.assertEqual(output.shape[0], test_batch)
+    
+    def test110_DenseNet121_WithDNDropLastNPolicy_MaximumN_NoExceptionOnForward(self):
+        max_n = 58
+        test_batch = 8
+
+        test_net = utils.getModelWithOptimized('densenet121-skip-last', max_n, test_batch)
+
+        test_tensor = torch.rand(test_batch, 3, 224, 224)
+        
+        output = test_net(test_tensor)
+
+        self.assertIsNotNone(output)
+        self.assertEqual(output.shape[0], test_batch)
+    
+    def test120_DenseNet121_WithDropRandNPolicy_MaximumN_NoExceptionOnForward(self):
+        max_n = 58
+        test_batch = 8
+
+        test_net = utils.getModelWithOptimized('densenet121-skip', max_n, test_batch)
+
+        output = test_net(torch.rand(test_batch, 3, 224, 224))
+
+        self.assertIsNotNone(output)
+        self.assertEqual(output.shape[0], test_batch)

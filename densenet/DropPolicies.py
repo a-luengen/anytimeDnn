@@ -48,7 +48,6 @@ class DNDropLastNPolicy(DenseNetDropPolicy):
     def __init__(self, block_config, n:int):
         super(DNDropLastNPolicy, self).__init__(block_config)
         max_layers = sum(block_config)
-
         if n > max_layers:
             raise ValueError('Value for n is to heigh. Cannot drop more Layers than possible.')
         

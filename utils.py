@@ -95,33 +95,54 @@ def getClasses(data_path: str):
     logging.debug(len(class_list))
     return class_list
 
-def getModelWithOptimized(arch: str, n=0):
-    if arch == 'resnet18-drop-rand-n':
+def getModelWithOptimized(arch: str, n=0, batch_size=None):
+
+    if '-drop-rand-n' in arch:
         ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
+    if '-drop-last-rand-n' in arch:
+        ResNet.setDropPolicy(ResNet.ResNetDropRandLastNPolicy(n))
+    else:
+        ResNet.setDropPolicy(None)
+        dndrop.setSkipPolicy(None)
+    if 'densenet' in arch:
+        if batch_size is None:
+            raise Exception('Batch_size should be set for each densenet.')
+        tdn.setGlobalBatchSize(batch_size)
+
+    if arch == 'resnet18-drop-rand-n' or arch == 'resnet18-drop-last-rand-n':
         return ResNet.resnet18(use_policy=True)
-    elif arch == 'resnet34-drop-rand-n':
-        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
+    elif arch == 'resnet34-drop-rand-n' or arch == 'resnet34-drop-last-rand-n':
         return ResNet.resnet34(use_policy=True)
-    elif arch == 'resnet50-drop-rand-n':
-        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
+    elif arch == 'resnet50-drop-rand-n' or arch == 'resnet50-drop-last-rand-n':
         return ResNet.resnet50(use_policy=True)
-    elif arch == 'resnet101-drop-rand-n':
-        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
+    elif arch == 'resnet101-drop-rand-n' or arch == 'resnet101-drop-last-rand-n':
         return ResNet.resnet101(use_policy=True)
-    elif arch == 'resnet152-drop-rand-n':
-        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
+    elif arch == 'resnet152-drop-rand-n' or arch == 'resnet152-drop-last-rand-n':
         return ResNet.resnet152(use_policy=True)
     elif arch == 'densenet121-skip':
-        
         dnn121_config = (6, 12, 24, 16)
         dndrop.setSkipPolicy(dndrop.DNDropRandNPolicy(dnn121_config, n))
 
         return tdn.densenet121(num_classes=40, use_skipping=True)
+    elif arch == 'densenet121-skip-last':
+        dnn121_config = (6, 12, 24, 16)
+        dndrop.setSkipPolicy(dndrop.DNDropLastNPolicy(dnn121_config, n))
+
+        return tdn.densenet121(num_classes=40, use_skipping=True)
+    elif arch == 'densenet169-skip':
+        dnn169_config = (6, 12, 32, 32)
+        dndrop.setSkipPolicy(dndrop.DNDropRandNPolicy(dnn169_config, n))
+
+        return tdn.densenet169(num_classes=40, use_skipping=True)
+    elif arch == 'densenet169-skip-last':
+        dnn169_config = (6, 12, 32, 32)
+        dndrop.setSkipPolicy(dndrop.DNDropLastNPolicy(dnn169_config, n))
+
+        return tdn.densenet169(num_classes=40, use_skipping=True)
     else:
         return getModel(arch)
 
 def getModel(arch: str):
-    logging.info(f"Loading model: {arch}")
     model = None
     if arch == 'resnet18':
         model = ResNet.resnet18()
@@ -144,7 +165,7 @@ def getModel(arch: str):
     elif arch == 'msdnet':
         model = get_msd_net_model()
     else:
-        model = ResNet.resnet50()
+        raise Exception('No model specified.')
     return model
 
 def getStateDict(model, epoch : int, arch : str, best_acc: float, optimizer):
