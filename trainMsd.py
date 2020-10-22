@@ -55,7 +55,7 @@ def AddMSDNetArguments(args):
         'data': 'ImageNet',
         'save': os.path.join(os.getcwd(), 'save'),
         'evalmode': None,
-        'start_epoch': START_EPOCH,
+        'epoch': START_EPOCH,
         'epochs': EPOCHS,
         'arch': 'msdnet',
         'seed': 42,
@@ -121,15 +121,25 @@ def main(args):
                                     momentum=args.momentum,
                                     weight_decay=args.weight_decay)
 
+
+
     calc_lr = lambda epoch: epoch // 30
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=calc_lr)
 
     train_loader, val_loader, test_loader = get_zipped_dataloaders(args.data_root, args.batch_size, use_valid=True)
 
-    best_prec1, best_epoch = 0.0, 0
+    best_prec1, best_epoch, start_epoch = 0.0, 0, 0
 
+    if 'epoch' in args and args.epoch:
+        model, optimizer, start_epoch, best_prec1  = resumeFromPath(
+            os.path.join(
+                os.getcwd(), 
+                CHECKPOINT_DIR, 
+                f"msdnet_{args.epoch}{CHECKPOINT_POSTFIX}"), 
+            model, 
+            optimizer)
 
-    for epoch in range(EPOCHS):
+    for epoch in range(start_epoch, EPOCHS, 1):
         logging.info(f"Started Epoch{epoch + 1}/{EPOCHS}")
         # train()
         train_loss, train_prec1, train_prec5, lr = train(train_loader, model, criterion, optimizer, scheduler, epoch)
@@ -318,35 +328,18 @@ def accuracy(output, target, topk=(1,)):
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
 
-def load_checkpoint(args):
-    model_dir = os.path.join(args.save, 'save_models')
-    latest_filename = os.path.join(model_dir, 'latest.txt')
-    if os.path.exists(latest_filename):
-        with open(latest_filename, 'r') as fin:
-            model_filename = fin.readlines()[0].strip()
-    else:
-        return None
-    logging.info("=> loading checkpoint '{}'".format(model_filename))
-    state = torch.load(model_filename)
-    logging.info("=> loaded checkpoint '{}'".format(model_filename))
-    return state
-
 if __name__ == '__main__':
     args = parser.parse_args()
     
     AddMSDNetArguments(args)
 
     if args.debug:
+        logging.basicConfig(level=logging.DEBUG)
         logging.info("###### Debug run! ########")
         args.data_root = REDUCED_SET_PATH
-
-    curTime = datetime.datetime.now()
-    #log_level = logging.INFO
-    #if IS_DEBUG:
-    log_level = logging.DEBUG
-
-    logging.basicConfig(filename=str(curTime) + ".log", level=log_level)
-    #logging.basicConfig(level=log_level)
+    else:
+        curTime = datetime.datetime.now()
+        logging.basicConfig(filename=str(curTime) + ".log", level=logging.INFO)
 
     try:
         main(args)
