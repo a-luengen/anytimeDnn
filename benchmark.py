@@ -12,6 +12,7 @@ from timeit import default_timer as timer
 from data.utils import getLabelToClassMapping
 from data.ImagenetDataset import get_zipped_dataloaders, REDUCED_SET_PATH
 from sklearn import metrics
+from collections import OrderedDict
 
 parser = argparse.ArgumentParser(description='Train several image classification network architectures.')
 parser.add_argument('--batch_size', metavar='N', type=int, default=argparse.SUPPRESS, help='Batchsize for training or validation run.')
@@ -32,12 +33,37 @@ def executeQualityBench(arch_name: str, loader, skip_n: int, classes, batch_size
     
     model = getModelWithOptimized(arch_name, n=skip_n, batch_size=batch_size)
 
+    # load state dict
+    loadFromCheckpoint(model, arch_name, False)
+
     grndT, pred = evaluateModel(model, loader, classes, batch_size)
     acc = metrics.accuracy_score(grndT, pred)
     prec = metrics.precision_score(grndT, pred, average='macro')
     rec = metrics.recall_score(grndT, pred, average='macro')
     f1 = metrics.f1_score(grndT, pred, average='macro')
     return acc, prec, rec, f1
+
+def loadFromCheckpoint(model, arch_name: str, use_gpu: bool):
+    arch = arch_name.split('-')[0]
+    path = os.path.join(os.getcwd(), 'checkpoints', f'{arch}_model_best.pth.tar')
+    
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f'No Checkpoint file at {path}')
+
+    logging.debug(f"=> loading checkpoint {path}")
+    
+    if not (use_gpu and torch.cuda.is_available() and isinstance(model, torch.nn.DataParallel)):
+        checkpoint = torch.load(path, map_location=torch.device('cpu'))
+        # remove 'module.' string before keys in state_dict
+        new_state_dict = OrderedDict()
+        for k,v in checkpoint['state_dict'].items():
+            name = k.replace('module.', '') # remove 'module.'
+            new_state_dict[name] = v
+        checkpoint['state_dict'] = new_state_dict
+    else:
+        checkpoint = torch.load(path)
+    
+    model.load_state_dict(checkpoint['state_dict'])
 
 def executeSpeedBench(arch_name:str, skip_n:int):
     model = getModelWithOptimized(arch_name, n=skip_n, batch_size=1)
@@ -60,7 +86,6 @@ def storeReportToCSV(reports_path:str, filename:str, data):
     df.to_csv(os.path.join(reports_path, filename), index=False)
 
 def executeBenchmark(args):
-    
 
     _, _, loader = get_zipped_dataloaders(args.data_root, args.batch_size, use_valid=True)
     classes = getLabelToClassMapping(os.path.join(os.getcwd(), args.data_root))
@@ -121,7 +146,7 @@ def executeBenchmark(args):
 
 if __name__ == "__main__":
 
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
     densenet_archs = ['densenet121', 'densenet169']
     densenet_pol = ['none', '-skip', '-skip-last']
