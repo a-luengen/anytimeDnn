@@ -7,12 +7,14 @@ import argparse
 import pandas as pd
 import traceback
 from tqdm import tqdm
-from utils import getModelWithOptimized
+from utils import getModelWithOptimized, resumeFromPath
 from timeit import default_timer as timer
 from data.utils import getLabelToClassMapping
 from data.ImagenetDataset import get_zipped_dataloaders, REDUCED_SET_PATH
 from sklearn import metrics
 from collections import OrderedDict
+
+STATE_DICT_PATH = os.path.join(os.getcwd(), 'state')
 
 parser = argparse.ArgumentParser(description='Train several image classification network architectures.')
 parser.add_argument('--batch_size', metavar='N', type=int, default=argparse.SUPPRESS, help='Batchsize for training or validation run.')
@@ -32,38 +34,18 @@ def evaluateModel(model, loader, classes, batch_size):
 def executeQualityBench(arch_name: str, loader, skip_n: int, classes, batch_size: int):
     
     model = getModelWithOptimized(arch_name, n=skip_n, batch_size=batch_size)
-
-    # load state dict
-    loadFromCheckpoint(model, arch_name, False)
+    model.eval()
+    arch = arch_name.split('-')[0]
+    model, _, _, _ = resumeFromPath(os.path.join(STATE_DICT_PATH, f'{arch}_model_best.pth.tar'), model)
 
     grndT, pred = evaluateModel(model, loader, classes, batch_size)
+
+    logging.debug(metrics.classification_report(grndT, pred, digits=3))
     acc = metrics.accuracy_score(grndT, pred)
     prec = metrics.precision_score(grndT, pred, average='macro')
     rec = metrics.recall_score(grndT, pred, average='macro')
     f1 = metrics.f1_score(grndT, pred, average='macro')
     return acc, prec, rec, f1
-
-def loadFromCheckpoint(model, arch_name: str, use_gpu: bool):
-    arch = arch_name.split('-')[0]
-    path = os.path.join(os.getcwd(), 'checkpoints', f'{arch}_model_best.pth.tar')
-    
-    if not os.path.isfile(path):
-        raise FileNotFoundError(f'No Checkpoint file at {path}')
-
-    logging.debug(f"=> loading checkpoint {path}")
-    
-    if not (use_gpu and torch.cuda.is_available() and isinstance(model, torch.nn.DataParallel)):
-        checkpoint = torch.load(path, map_location=torch.device('cpu'))
-        # remove 'module.' string before keys in state_dict
-        new_state_dict = OrderedDict()
-        for k,v in checkpoint['state_dict'].items():
-            name = k.replace('module.', '') # remove 'module.'
-            new_state_dict[name] = v
-        checkpoint['state_dict'] = new_state_dict
-    else:
-        checkpoint = torch.load(path)
-    
-    model.load_state_dict(checkpoint['state_dict'])
 
 def executeSpeedBench(arch_name:str, skip_n:int):
     model = getModelWithOptimized(arch_name, n=skip_n, batch_size=1)
@@ -88,20 +70,26 @@ def storeReportToCSV(reports_path:str, filename:str, data):
 def executeBenchmark(args):
 
     _, _, loader = get_zipped_dataloaders(args.data_root, args.batch_size, use_valid=True)
-    classes = getLabelToClassMapping(os.path.join(os.getcwd(), args.data_root))
+    label_to_classes = getLabelToClassMapping(os.path.join(os.getcwd(), args.data_root))
 
     for bench_type in args.bench_types:
         for arch, pol in args.arch_pol_tupl_ls:
             d = {'run': [], 'skip_n': [], 'bench_type': [], 'arch': [], 'pol': [], 'prec': [], 'rec': [], 'acc': [], 'f1': [], 'time': []}
             #config tqdm
             logging.info(f'Running {bench_type}-Bench on {arch}-{pol}...')
+
+            skip_layers_list = args.skip_layers_values
+            runs = args.runs
+
             if pol == 'none':
                 arch_name = arch
+                skip_layers_list = [0]
+                runs = 1
             else:
                 arch_name = f'{arch}-{pol}'
-            with tqdm(total=(len(args.skip_layers_values) * args.runs), ncols=80, desc=f'Progress-{bench_type}-{arch}-{pol}') as pbar:
-                for skip_n in args.skip_layers_values:
-                    for run in range(args.runs):
+            with tqdm(total=(len(skip_layers_list) * runs), ncols=80, desc=f'Progress-{bench_type}-{arch}-{pol}') as pbar:
+                for skip_n in skip_layers_list:
+                    for run in range(runs):
                         prec = 0.0
                         rec = 0.0
                         acc = 0.0
@@ -110,8 +98,8 @@ def executeBenchmark(args):
 
                         try:
                             if bench_type == 'quality':
-                                prec, acc, rec, f1 = executeQualityBench(arch_name, loader, skip_n, classes, args.batch_size)
-                                #print(f'{run} - {skip_n} - {bench_type} - {arch} - {pol} - {prec:.6f} - {rec:.6f} - {acc:.6f} - {f1:.6f}')
+                                prec, acc, rec, f1 = executeQualityBench(arch_name, loader, skip_n, label_to_classes, args.batch_size)
+                                print(f'{run} - {skip_n} - {bench_type} - {arch} - {pol} - {prec:.6f} - {rec:.6f} - {acc:.6f} - {f1:.6f}')
                             elif bench_type == 'speed':
                                 time = executeSpeedBench(arch_name, skip_n)
                                 #print(f'{run} - {skip_n} - {bench_type} - {arch} - {pol} - {time:.6f}')
@@ -146,7 +134,7 @@ def executeBenchmark(args):
 
 if __name__ == "__main__":
 
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.DEBUG)
 
     densenet_archs = ['densenet121', 'densenet169']
     densenet_pol = ['none', '-skip', '-skip-last']
@@ -198,6 +186,7 @@ if __name__ == "__main__":
     args.runs = 30
     args.data_root = REDUCED_SET_PATH
     args.reports_path = os.path.join(os.getcwd(), 'reports')
+    args.state_path = STATE_DICT_PATH
     args.batch_size = 1 if not 'batch_size' in args else args.batch_size
     logging.info(args)
     executeBenchmark(args)
