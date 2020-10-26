@@ -14,14 +14,14 @@ import densenet.DropPolicies as dndrop
 from collections import OrderedDict
 from typing import List
 
-def get_msd_net_model():
+def get_msd_net_model(nBlocks=5):
     grFact = '1-2-4-4'
     bnFact = '1-2-4-4'
     obj = argparse.Namespace()
     obj.bnFactor = list(map(int, bnFact.split('-')))
     obj.grFactor = list(map(int, grFact.split('-')))
-    obj.nBlocks = 5
-    obj.nChannels = 224 # For CIFAR 32
+    obj.nBlocks = nBlocks
+    obj.nChannels = 32 # For CIFAR 32
     obj.base = 4
     obj.stepmode = 'even'
     obj.step = 4
@@ -162,6 +162,8 @@ def getModel(arch: str):
     elif arch == 'densenet169':
         #model = dn.DenseNet4([6, 12, 32, 32], 40, growth_rate=32)
         model = tdn.densenet169(num_classes=40)
+    elif arch == 'msdnet4':
+        model = get_msd_net_model(4)
     elif arch == 'msdnet':
         model = get_msd_net_model()
     else:

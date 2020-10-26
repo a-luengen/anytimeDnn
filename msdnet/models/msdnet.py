@@ -205,6 +205,7 @@ class MSDNet(nn.Module):
         self.blocks = nn.ModuleList()
         self.classifier = nn.ModuleList()
         self.nBlocks = args.nBlocks
+        self.max_classifiers = args.nBlocks
         self.steps = [args.base]
         self.args = args
         
@@ -254,6 +255,9 @@ class MSDNet(nn.Module):
                     self._init_weights(_m)
             else:
                 self._init_weights(m)
+
+    def setMaxClassifiers(self, max: int):
+        self.max_classifiers = max
 
     def _init_weights(self, m):
         if isinstance(m, nn.Conv2d):
@@ -336,7 +340,7 @@ class MSDNet(nn.Module):
 
     def forward(self, x):
         res = []
-        for i in range(self.nBlocks):
+        for i in range(min(self.max_classifiers, self.nBlocks)):
             x = self.blocks[i](x)
             res.append(self.classifier[i](x))
         return res
