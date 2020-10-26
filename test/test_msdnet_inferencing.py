@@ -1,19 +1,20 @@
 import unittest
 import torch
-from timeit import default_timer as timer
 
+from timeit import default_timer as timer
 from .context import utils
 
 
 class TestMsdNetInferencing(unittest.TestCase):
 
+    test_input = torch.rand(1, 3, 224, 224)
 
     def test000_forwardOnMsdNet4_NoExcpetion(self):
 
         model = utils.getModelWithOptimized('msdnet4')
 
         expected_outputs = 4
-        output = model(torch.rand(1, 3, 224, 224))
+        output = model(self.test_input)
 
         self.assertIsNotNone(output)
         self.assertEqual(expected_outputs, len(output))
@@ -24,7 +25,7 @@ class TestMsdNetInferencing(unittest.TestCase):
 
         expected_outputs = 5
 
-        output = model(torch.rand(1, 3, 224, 224))
+        output = model(self.test_input)
 
         self.assertIsNotNone(output)
         self.assertEqual(expected_outputs, len(output))
@@ -33,7 +34,7 @@ class TestMsdNetInferencing(unittest.TestCase):
         model = utils.getModelWithOptimized('msdnet4')
         max_classifications = [x for x in range(1, model.nBlocks + 1)]
 
-        test_input = torch.rand(1, 3, 224, 224)
+        test_input = self.test_input
 
         for max_cls in max_classifications:
             model.setMaxClassifiers(max_cls)
@@ -45,7 +46,7 @@ class TestMsdNetInferencing(unittest.TestCase):
 
         max_classifications = [x for x in range(1, model.nBlocks + 1)]
         
-        test_input = torch.rand(1, 3, 224, 224)
+        test_input = self.test_input
 
         for max_cls in max_classifications:
             model.setMaxClassifiers(max_cls)
@@ -58,7 +59,7 @@ class TestMsdNetInferencing(unittest.TestCase):
 
         max_classifications = [x for x in range(1, model.nBlocks + 1)]
 
-        test_input = torch.rand(1, 3, 224, 224)
+        test_input = self.test_input
 
         time_results = []
         for max_cls in max_classifications:
@@ -67,5 +68,6 @@ class TestMsdNetInferencing(unittest.TestCase):
             output = model(test_input)
             end = timer()
             time_results.append(end - start)
+            
         for i in range(len(time_results) - 1):
             self.assertLessEqual(time_results[i], time_results[i + 1])
