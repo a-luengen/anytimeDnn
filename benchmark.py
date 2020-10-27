@@ -62,7 +62,7 @@ def executeSpeedBench(arch_name:str, skip_n:int):
 
 def storeReportToCSV(reports_path:str, filename:str, data):
     df = pd.DataFrame(data=data)
-    print(reports_path, filename)
+    logging.info(f'{reports_path} - {filename}')
     if not os.path.isdir:
         os.mkdir(reports_path)
     df.to_csv(os.path.join(reports_path, filename), index=False)
@@ -99,7 +99,7 @@ def executeBenchmark(args):
                         try:
                             if bench_type == 'quality':
                                 prec, acc, rec, f1 = executeQualityBench(arch_name, loader, skip_n, label_to_classes, args.batch_size)
-                                print(f'{run} - {skip_n} - {bench_type} - {arch} - {pol} - {prec:.6f} - {rec:.6f} - {acc:.6f} - {f1:.6f}')
+                                #print(f'{run} - {skip_n} - {bench_type} - {arch} - {pol} - {prec:.6f} - {rec:.6f} - {acc:.6f} - {f1:.6f}')
                             elif bench_type == 'speed':
                                 time = executeSpeedBench(arch_name, skip_n)
                                 #print(f'{run} - {skip_n} - {bench_type} - {arch} - {pol} - {time:.6f}')
@@ -134,10 +134,11 @@ def executeBenchmark(args):
 
 if __name__ == "__main__":
 
-    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
-    densenet_archs = ['densenet121', 'densenet169']
-    densenet_pol = ['none', '-skip', '-skip-last']
+    densenet_archs = ['densenet169']#['densenet121', 'densenet169']
+    densenet_pol = ['-skip-last']#['none', '-skip', '-skip-last']
     densenet_archs = [x + y for x in densenet_archs for y in densenet_pol]
     densenet_archs = [x.replace('none', '') for x in densenet_archs]
     
