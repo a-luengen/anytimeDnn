@@ -33,7 +33,7 @@ parser.add_argument('--batch', metavar='N', type=int, default=argparse.SUPPRESS,
 LAST_CHECKPOINT_EPOCH = 0
 ################################################################################################
 
-IS_DEBUG = True
+IS_DEBUG = False
 DEBUG_ITERATIONS = 40
 STAT_FREQUENCY = 200
 LEARNING_RATE = 0.1
