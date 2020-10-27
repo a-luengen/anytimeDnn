@@ -97,6 +97,9 @@ def getClasses(data_path: str):
     return class_list
 
 def getModelWithOptimized(arch: str, n=0, batch_size=None):
+    dnn121_config = (6, 12, 24, 16)
+    dnn169_config = (6, 12, 32, 32)
+
 
     if '-drop-rand-n' in arch:
         rndrop.setDropPolicy(rndrop.ResNetDropRandNPolicy(n))
@@ -121,25 +124,29 @@ def getModelWithOptimized(arch: str, n=0, batch_size=None):
     elif arch == 'resnet152-drop-rand-n' or arch == 'resnet152-drop-last-rand-n':
         return ResNet.resnet152(use_policy=True)
     elif arch == 'densenet121-skip':
-        dnn121_config = (6, 12, 24, 16)
         dndrop.setSkipPolicy(dndrop.DNDropRandNPolicy(dnn121_config, n))
-
         return tdn.densenet121(num_classes=40, use_skipping=True)
+
     elif arch == 'densenet121-skip-last':
-        dnn121_config = (6, 12, 24, 16)
         dndrop.setSkipPolicy(dndrop.DNDropLastNPolicy(dnn121_config, n))
-
         return tdn.densenet121(num_classes=40, use_skipping=True)
+
+    elif arch == 'densenet121-skip-last-n-block':
+        dndrop.setSkipPolicy(dndrop.DNDropLastNOfEachBlockPolicy(dnn169_config, n))
+        return tdn.densenet121(num_classes=40, use_skipping=True)
+
     elif arch == 'densenet169-skip':
-        dnn169_config = (6, 12, 32, 32)
         dndrop.setSkipPolicy(dndrop.DNDropRandNPolicy(dnn169_config, n))
-
         return tdn.densenet169(num_classes=40, use_skipping=True)
+
     elif arch == 'densenet169-skip-last':
-        dnn169_config = (6, 12, 32, 32)
         dndrop.setSkipPolicy(dndrop.DNDropLastNPolicy(dnn169_config, n))
-
         return tdn.densenet169(num_classes=40, use_skipping=True)
+
+    elif arch == 'densenet169-skip-last-n-block':
+        dndrop.setSkipPolicy(dndrop.DNDropLastNOfEachBlockPolicy(dnn169_config, n))
+        return tdn.densenet169(num_classes=40, use_skipping=True)
+
     else:
         return getModel(arch)
 

@@ -204,3 +204,94 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
 
         self.assertIsNotNone(output)
         self.assertEqual(output.shape[0], test_batch)
+    
+    def test130_ForAllDenseNetArchs_SkipPolicyIsSet_OnGetModelWithOptimized(self):
+        archs = ['densenet121', 'densenet169']
+
+        test_n = 9
+        test_batch = 9
+
+        for arch in archs:
+            utils.getModelWithOptimized(arch + '-skip', n=test_n, batch_size=test_batch)
+            policy = densenet.DropPolicies.getSkipPolicy()
+
+            self.assertIsNotNone(policy)
+            self.assertIsInstance(policy, densenet.DropPolicies.DNDropRandNPolicy)
+
+    def test140_ForAllDenseNetArchs_SkipLastNPolicyIsSet_OnGetModelWithOptimized(self):
+
+        archs = ['densenet121', 'densenet169']
+        test_n = 9
+        test_batch = 10
+
+        for arch in archs:
+            utils.getModelWithOptimized(arch + '-skip-last', n=test_n, batch_size=test_batch)
+            policy = densenet.DropPolicies.getSkipPolicy()
+
+            self.assertIsNotNone(policy)
+            self.assertIsInstance(policy, densenet.DropPolicies.DNDropLastNPolicy)
+    
+    def test150_DNDropLastNOfEachBlockPolicy_HasCorrectAmountOfSkips(self):
+
+        test_block_config = (3, 3, 3, 3)
+        test_n = 4
+
+        test_policy = densenet.DropPolicies.DNDropLastNOfEachBlockPolicy(test_block_config, test_n)
+
+        resulting_skips = 0
+        for i in range(len(test_block_config)):
+            resulting_skips += sum(test_policy.getDropLayerConfiguration(i))
+        
+        self.assertIsNotNone(test_policy)
+        self.assertNotEqual(0, len(test_policy.getFullConfig()))
+        self.assertEqual(resulting_skips, test_n)
+        
+    def test160_DNDropLastNOfEachBlockPolicy_HasCorrectAmountOfSkipsPerLayer(self):
+        test_block_config = (3, 3, 3, 3, 3)
+        test_n = 10
+
+        expected_skips_per_layer = test_n // len(test_block_config)
+
+        test_policy = densenet.DropPolicies.DNDropLastNOfEachBlockPolicy(test_block_config, test_n)
+
+        for i in range(len(test_block_config)):
+            self.assertEqual(sum(test_policy.getDropLayerConfiguration(i)), expected_skips_per_layer)
+    
+    def test170_DNDropLastNOfEachBlockPolicy_HasCorrectAmountOfSkipsPerLayer(self):
+        test_block_config = (3, 1, 3, 1)
+        test_n = 6
+        expected_skips_per_layer = [2, 1, 2, 1]
+
+        test_policy = densenet.DropPolicies.DNDropLastNOfEachBlockPolicy(test_block_config, test_n)
+
+        for i, amount in enumerate(expected_skips_per_layer):
+            self.assertEqual(sum(test_policy.getDropLayerConfiguration(i)), amount)
+        
+    def test180_DenseNet121_WithDNDropLastNOfEachBlockPolicy_NoExceptionOnForward_WithMaxBlocksToDrop(self):
+        
+        block_config = (6, 12, 24, 16)
+
+        test_n, test_batch = sum(block_config), 1
+
+        test_tensor = torch.rand(test_batch, 3, 224, 224)
+
+        test_net = utils.getModelWithOptimized('densenet121-skip-last-n-block', test_n, test_batch)
+
+        test_net(test_tensor)
+    
+    def test190_DenseNet169_WithDNDropLastNOfEachBlockPolicy_NoExceptionOnForward_WithMaxBlocksToDrop(self):
+        block_config = (6, 12, 32, 32)
+
+        test_n, test_batch = sum(block_config), 3
+
+        test_tensor = torch.rand(test_batch, 3, 224, 224)
+
+        test_net = utils.getModelWithOptimized('densenet169-skip-last-n-block', test_n, test_batch)
+
+        test_net(test_tensor)
+
+        result_skip_sum = 0
+        for i in range(len(block_config)):
+            result_skip_sum += sum(densenet.DropPolicies.getSkipPolicy().getDropLayerConfiguration(i))
+
+        self.assertEqual(result_skip_sum, test_n)
