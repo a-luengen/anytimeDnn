@@ -8,6 +8,7 @@ import pandas as pn
 from sklearn import metrics
 from msdnet.models.msdnet import MSDNet
 from resnet import ResNet
+import resnet.DropPolicies as rndrop
 import densenet.densenet as dn
 import densenet.torchDensenet as tdn
 import densenet.DropPolicies as dndrop
@@ -98,11 +99,11 @@ def getClasses(data_path: str):
 def getModelWithOptimized(arch: str, n=0, batch_size=None):
 
     if '-drop-rand-n' in arch:
-        ResNet.setDropPolicy(ResNet.ResNetDropRandNPolicy(n))
-    if '-drop-last-rand-n' in arch:
-        ResNet.setDropPolicy(ResNet.ResNetDropRandLastNPolicy(n))
+        rndrop.setDropPolicy(rndrop.ResNetDropRandNPolicy(n))
+    elif '-drop-last-rand-n' in arch:
+        rndrop.setDropPolicy(rndrop.ResNetDropRandLastNPolicy(n))
     else:
-        ResNet.setDropPolicy(None)
+        rndrop.setDropPolicy(None)
         dndrop.setSkipPolicy(None)
     if 'densenet' in arch:
         if batch_size is None:

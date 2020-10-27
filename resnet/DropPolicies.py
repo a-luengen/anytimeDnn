@@ -3,6 +3,10 @@ import random as rd
 import resnet.utils as r_util
 from typing import List
 
+RN_DROP_POLICY = {
+    'policy': None
+}
+
 class ResnetDropResidualPolicy(object):
     def __init__(self):
         self.dropCount = 0
@@ -80,6 +84,13 @@ class ResNetDropRandLastNPolicy(ResNetDropRandNPolicy):
         super().setMaxSkipableLayers(maxCount)
 
         self.shouldDropLayer = sorted(r_util.getRandomBoolListPermutation(maxCount, self._n))
+
+def setDropPolicy(policy: ResnetDropResidualPolicy) -> None:
+    global RN_DROP_POLICY
+    RN_DROP_POLICY['policy'] = policy
+
+def getDropPolicy() -> ResnetDropResidualPolicy:
+    return RN_DROP_POLICY['policy']
 
 
 

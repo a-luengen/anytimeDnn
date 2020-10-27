@@ -105,14 +105,3 @@ def resnet152(use_policy=False):
     """ return a ResNet 152 object
     """
     return ResNet(BottleNeck, [3, 8, 36, 3], use_policy=use_policy)
-
-
-DROP_POLICY = {
-    "policy": None
-}
-
-def setDropPolicy(policy: ResnetDropResidualPolicy) -> None:
-    DROP_POLICY['policy'] = policy
-
-def getDropPolicy() -> ResnetDropResidualPolicy:
-    return DROP_POLICY['policy']

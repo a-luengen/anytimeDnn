@@ -68,7 +68,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
         test_n = 1
         test_policy = resnet.DropPolicies.ResNetDropRandNPolicy(test_n)
 
-        resnet.ResNet.setDropPolicy(test_policy)
+        resnet.DropPolicies.setDropPolicy(test_policy)
 
         test_net = resnet.ResNet.resnet18(use_policy=True)
 
@@ -78,12 +78,35 @@ class TestResnetSkippingPolicies(unittest.TestCase):
     
     def test09_getModelWithOptimized_returnsResNet18_policyIsSet(self):
         test_n = 3
-        model = utils.getModelWithOptimized('resnet18-drop-rand-n', n=test_n)
+        model = utils.getModelWithOptimized('resnet18-drop-rand-n', n=test_n, batch_size=10)
+        res_policy = resnet.DropPolicies.getDropPolicy()
+        self.assertIsNotNone(model)
+        self.assertIsNotNone(res_policy)
+        self.assertTrue(isinstance(res_policy, resnet.DropPolicies.ResNetDropRandNPolicy))
+        self.assertEqual(sum(res_policy.getDropConfig()), test_n)
+    
+    def test095_getModelWithOptimized_returnsResNet34_AndPolicyIsSet(self):
+        test_n = 5
+        model = utils.getModelWithOptimized('resnet34-drop-rand-n', n=test_n, batch_size=10)
+
+        res_policy = resnet.DropPolicies.getDropPolicy()
 
         self.assertIsNotNone(model)
-        self.assertIsNotNone(resnet.ResNet.getDropPolicy())
-        self.assertTrue(isinstance(resnet.ResNet.getDropPolicy(), resnet.DropPolicies.ResNetDropRandNPolicy))
-        self.assertEqual(sum(resnet.ResNet.getDropPolicy().getDropConfig()), test_n)
+        self.assertIsNotNone(res_policy)
+        self.assertIsInstance(res_policy, resnet.DropPolicies.ResNetDropRandNPolicy)
+        self.assertEqual(sum(res_policy.getDropConfig()), test_n)
+    
+    def test097_getModelWithOptimized_returnsResNet18_AndDropLastRandNPolicyIsSet(self):
+        test_n = 2
+        model = utils.getModelWithOptimized('resnet18-drop-last-rand-n', n=test_n, batch_size=10)
+
+        res_policy = resnet.DropPolicies.getDropPolicy()
+
+        self.assertIsNotNone(model)
+        self.assertIsNotNone(res_policy)
+        self.assertIsInstance(res_policy, resnet.DropPolicies.ResNetDropRandLastNPolicy)
+        self.assertEqual(sum(res_policy.getDropConfig()), test_n)
+    
 
     def test10_resnet18_withDropRandNPolicy_Forward2Times_noException(self):
         test_n = 3
