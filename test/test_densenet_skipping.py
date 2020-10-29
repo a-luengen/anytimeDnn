@@ -310,3 +310,17 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
             res_drop += sum(layer_conf)
         
         self.assertEqual(test_n, res_drop)
+    
+    def test210_DNDropNormalDistributiodN_IsSet_OnGetModelWithOptimized_ForAllDenseArchs(self):
+
+        test_archs = ['densenet121', 'densenet169']
+
+        test_n = 10
+        test_batch = 20
+        test_pol_name = 'skip-norm-n'
+
+        for arch in test_archs:
+            model = utils.getModelWithOptimized(arch + '-' + test_pol_name, test_n, test_batch)
+            res_pol = densenet.DropPolicies.getSkipPolicy()
+            self.assertIsNotNone(res_pol)
+            self.assertIsInstance(res_pol, densenet.DropPolicies.DNDropNormalDistributedN)

@@ -108,7 +108,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
         self.assertEqual(sum(res_policy.getDropConfig()), test_n)
     
 
-    def test10_resnet18_withDropRandNPolicy_Forward2Times_noException(self):
+    def test100_resnet18_withDropRandNPolicy_Forward2Times_noException(self):
         test_n = 3
 
         model = utils.getModelWithOptimized('resnet18-drop-rand-n', n=test_n)
@@ -118,7 +118,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
         model(test_input)
         pass
 
-    def test020_resnetDropLastRandNLayers_hasCorrectAmountOfTrueValuesInConfig(self):
+    def test110_resnetDropLastRandNLayers_hasCorrectAmountOfTrueValuesInConfig(self):
 
         test_n = 4
         test_max_layers = 10
@@ -130,7 +130,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
 
         self.assertEqual(test_n, sum(config_list))
     
-    def test030_resnetDropLastRandNLayers_hasOnlyLastLayersSetToTrue(self):
+    def test120_resnetDropLastRandNLayers_hasOnlyLastLayersSetToTrue(self):
 
         test_n = 4
         test_max_layers = 10
@@ -148,3 +148,19 @@ class TestResnetSkippingPolicies(unittest.TestCase):
         self.assertEqual(len(false_list), test_max_layers - 4)
         self.assertEqual(sum(true_list), test_n)
         self.assertEqual(len(true_list), test_n)
+    
+    def test130_resnetDropNRandNormalDistributionPolicy_IsSet_OnWithOptimized(self):
+
+        test_arch = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152']
+
+        test_policy = 'drop-norm-n'
+
+        test_n = 5
+        test_batch = 20
+
+        for arch in test_arch:
+            model = utils.getModelWithOptimized(arch + '-' + test_policy, test_n, test_batch)
+            res_policy = resnet.DropPolicies.getDropPolicy()
+
+            self.assertIsNotNone(res_policy)
+            self.assertIsInstance(res_policy, resnet.DropPolicies.ResNetDropNRandNormalDistributionPolicy)
