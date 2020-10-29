@@ -1,0 +1,2 @@
+run,skip_n,bench_type,arch,pol,prec,rec,acc,f1,time
+0,0,speed,resnet34,none,0.0,0.0,0.0,0.0,0.5988611399989168
