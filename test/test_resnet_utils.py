@@ -22,3 +22,12 @@ class TestResnetUtils(unittest.TestCase):
         random_perm = resnet_utils.getRandomBoolListPermutation(test_size, test_max_n)
 
         self.assertEqual(test_max_n, sum(random_perm))
+    
+    def test020_getGaussDistributedBoolList_HasExactlyNTrueValues(self):
+
+        test_size = 30
+        test_max_n = 12
+
+        res_bool_list = resnet_utils.getGaussDistributedBoolList(test_size, test_max_n)
+
+        self.assertEqual(test_max_n, sum(res_bool_list))

@@ -295,3 +295,18 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
             result_skip_sum += sum(densenet.DropPolicies.getSkipPolicy().getDropLayerConfiguration(i))
 
         self.assertEqual(result_skip_sum, test_n)
+    
+    def test200_DNDropNormalDistributedN_ExactlyNLayersToDrop(self):
+
+        test_block_config = (4, 10, 2, 3)
+        test_n = 10
+
+        test_policy = densenet.DropPolicies.DNDropNormalDistributedN(test_block_config, test_n)
+
+        res_drop = 0
+        for i in range(len(test_block_config)):
+            layer_conf = test_policy.getDropLayerConfiguration(i)
+            self.assertEqual(len(layer_conf), test_block_config[i])
+            res_drop += sum(layer_conf)
+        
+        self.assertEqual(test_n, res_drop)

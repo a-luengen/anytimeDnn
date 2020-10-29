@@ -1,4 +1,4 @@
-from resnet.utils import getRandomBoolListPermutation
+from resnet.utils import getRandomBoolListPermutation, getGaussDistributedBoolList
 
 SKIP_POLICY = {'policy': None}
 
@@ -28,6 +28,9 @@ class DenseNetDropNPolicy(DenseNetDropPolicy):
         return self.block_layer_config[idx]
 
 class DNDropRandNPolicy(DenseNetDropNPolicy):
+
+    name = 'skip'
+
     def __init__(self, block_config, n):
         super(DNDropRandNPolicy, self).__init__(block_config, n)
 
@@ -47,6 +50,8 @@ class DNDropLastNPolicy(DenseNetDropNPolicy):
         Randomly drops n-Layers within a Block, by only choosing the last 
         Layer from Blocks.
     """
+
+    name = 'skip-last'
 
     def __init__(self, block_config, n:int):
         super(DNDropLastNPolicy, self).__init__(block_config, n)
@@ -70,6 +75,9 @@ class DNDropLastNOfEachBlockPolicy(DenseNetDropNPolicy):
         Chooses N-Layers to drop, by selecting always the last
         not already selected Layer in each Block, until N-Layers are dropped in total.
     """
+
+    name = 'skip-last-n-block'
+
     def __init__(self, block_config, n: int):
         super(DNDropLastNOfEachBlockPolicy, self).__init__(block_config, n)
 
@@ -96,6 +104,26 @@ class DNDropLastNOfEachBlockPolicy(DenseNetDropNPolicy):
                 skips_to_take -= 1
 
         self.block_layer_config = layer_config
+
+class DNDropNormalDistributedN(DenseNetDropNPolicy):
+    """
+        Drops N-Layers from a DenseNet choosen by Normal-Distribution.
+    """
+    def __init__(self, block_config, n):
+        super(DNDropNormalDistributedN, self).__init__(block_config, n)
+
+
+        layer_config = getGaussDistributedBoolList(sum(block_config), n)
+
+
+        prev_val = 0
+        temp_split = []
+        for i in block_config:
+            temp_split.append((prev_val, prev_val + i))
+            prev_val += i
+        
+        self.block_layer_config = [layer_config[i:j] for i, j in temp_split]
+
 
 def setSkipPolicy(policy):
     SKIP_POLICY['policy'] = policy

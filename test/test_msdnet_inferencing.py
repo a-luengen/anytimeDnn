@@ -61,6 +61,10 @@ class TestMsdNetInferencing(unittest.TestCase):
 
         test_input = self.test_input
 
+        # warmup
+        model.setMaxClassifiers(len(max_classifications) - 1)
+        model(test_input)
+
         time_results = []
         for max_cls in max_classifications:
             model.setMaxClassifiers(max_cls)
