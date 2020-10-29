@@ -25,6 +25,10 @@ parser.add_argument('--bench_type', type=str, default=None, choices=['quality', 
 def evaluateModel(model, loader, classes, batch_size): 
     pred, grndT = [], []
     for (images, labels) in iter(loader):
+        if torch.cuda.is_available():
+            images = images.cuda(non_blocking=True)
+            labels = labels.cuda(non_blocking=True)
+            
         outputs = model(images)
         _, predicted = torch.max(outputs, 1)
         pred = pred + [classes[predicted[k]] for k in range(min(batch_size, labels.shape[0]))]
@@ -34,6 +38,10 @@ def evaluateModel(model, loader, classes, batch_size):
 def executeQualityBench(arch_name: str, loader, skip_n: int, classes, batch_size: int):
     
     model = getModelWithOptimized(arch_name, n=skip_n, batch_size=batch_size)
+
+    if torch.cuda.is_available():
+        model = torch.nn.DataParallel(model).cuda()
+
     model.eval()
     arch = arch_name.split('-')[0]
     model, _, _, _ = resumeFromPath(os.path.join(STATE_DICT_PATH, f'{arch}_model_best.pth.tar'), model)
