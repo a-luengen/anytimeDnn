@@ -89,7 +89,7 @@ def executeBenchmark(args):
             skip_layers_list = args.skip_layers_values
             runs = args.runs
 
-            if pol == 'none':
+            if pol == 'none' and bench_type == 'quality':
                 arch_name = arch
                 skip_layers_list = [0]
                 runs = 1
@@ -145,8 +145,8 @@ if __name__ == "__main__":
     #logging.basicConfig(level=logging.DEBUG)
     logging.basicConfig(level=logging.INFO)
 
-    densenet_archs = ['densenet169']#['densenet121', 'densenet169']
-    densenet_pol = ['-skip-last']#['none', '-skip', '-skip-last']
+    densenet_archs = ['densenet121', 'densenet169']
+    densenet_pol = ['none', '-skip', '-skip-last']
     densenet_archs = [x + y for x in densenet_archs for y in densenet_pol]
     densenet_archs = [x.replace('none', '') for x in densenet_archs]
     
