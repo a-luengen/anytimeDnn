@@ -1,2 +1,1 @@
 run,skip_n,bench_type,arch,pol,prec,rec,acc,f1,time
-0,0,speed,densenet121,none,0.0,0.0,0.0,0.0,0.10648957999910635
