@@ -47,8 +47,8 @@ class DNDropRandNPolicy(DenseNetDropNPolicy):
 
 class DNDropLastNPolicy(DenseNetDropNPolicy):
     """
-        Randomly drops n-Layers within a Block, by only choosing the last 
-        Layer from Blocks.
+        Drops a random amount of last layers within a block, but always 
+        exactly n layers.
     """
 
     name = 'skip-last'
@@ -72,8 +72,8 @@ class DNDropLastNPolicy(DenseNetDropNPolicy):
         
 class DNDropLastNOfEachBlockPolicy(DenseNetDropNPolicy):
     """
-        Chooses N-Layers to drop, by selecting always the last
-        not already selected Layer in each Block, until N-Layers are dropped in total.
+        Drops a total of N-Layers from the Network, by evenly dropping the last layer
+        from each block, until N-Layers are dropped. Starting from the last block on.
     """
 
     name = 'skip-last-n-block'
@@ -109,6 +109,9 @@ class DNDropNormalDistributedN(DenseNetDropNPolicy):
     """
         Drops N-Layers from a DenseNet choosen by Normal-Distribution.
     """
+
+    name = 'skip-norm-n'
+
     def __init__(self, block_config, n):
         super(DNDropNormalDistributedN, self).__init__(block_config, n)
 
