@@ -109,12 +109,15 @@ class _DenseBlockWithSkip(nn.ModuleDict):
         else:
             self.layer_skip_config = layer_skip_config
 
+        is_cuda = torch.cuda.is_available()
+        device = 'cuda' if is_cuda else 'cpu'
+
         batch_size = getGlobalBatchSize()
         self.layer_tensor_replacement = dict([
-            (56, torch.zeros(batch_size, growth_rate, 56, 56)),
-            (28, torch.zeros(batch_size, growth_rate, 28, 28)),
-            (14, torch.zeros(batch_size, growth_rate, 14, 14)),
-            (7, torch.zeros(batch_size, growth_rate, 7, 7))
+            (56, torch.zeros(batch_size, growth_rate, 56, 56).to(device)),
+            (28, torch.zeros(batch_size, growth_rate, 28, 28).to(device)),
+            (14, torch.zeros(batch_size, growth_rate, 14, 14).to(device)),
+            (7, torch.zeros(batch_size, growth_rate, 7, 7).to(device))
         ])
 
 
