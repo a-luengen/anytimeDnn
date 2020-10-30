@@ -146,12 +146,12 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     densenet_archs = ['densenet121', 'densenet169']
-    densenet_pol = ['none', '-skip', '-skip-last']
+    densenet_pol = ['none', '-skip', '-skip-last', 'skip-norm-n', 'skip-last-n-block']
     densenet_archs = [x + y for x in densenet_archs for y in densenet_pol]
     densenet_archs = [x.replace('none', '') for x in densenet_archs]
     
     resnet_archs = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152']
-    resnet_pol = ['none', '-drop-rand-n', '-drop-last-rand-n']
+    resnet_pol = ['none', '-drop-rand-n', '-drop-last-rand-n', 'drop-norm-n']
     resnet_archs = [x + y for x in resnet_archs for y in resnet_pol]
     resnet_archs = [x.replace('none', '') for x in resnet_archs]
     
