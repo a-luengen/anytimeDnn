@@ -20,6 +20,7 @@ parser = argparse.ArgumentParser(description='Train several image classification
 parser.add_argument('--batch_size', metavar='N', type=int, default=argparse.SUPPRESS, help='Batchsize for training or validation run.')
 parser.add_argument('--runs', metavar='N', type=int, default=30, help='Number of runs to collect data for each item to benchmark.')
 parser.add_argument('--only_arch', type=str, default=None, choices=['resnet', 'densenet'], help='Only benchmark architectures as specified by given string.')
+parser.add_argument('--only_n', metavar='N', type=int, default=None, help='Executes benchmark with skipping only n layers.')
 parser.add_argument('--bench_type', type=str, default=None, choices=['quality', 'speed'], help='Execute only the specfied benchmark type.')
 
 def evaluateModel(model, loader, classes, batch_size): 
@@ -146,14 +147,19 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     densenet_archs = ['densenet121', 'densenet169']
-    densenet_pol = ['none', '-skip', '-skip-last', 'skip-norm-n', 'skip-last-n-block']
-    densenet_archs = [x + y for x in densenet_archs for y in densenet_pol]
-    densenet_archs = [x.replace('none', '') for x in densenet_archs]
+    densenet_pol = ['-none', '-skip', '-skip-last', '-skip-norm-n', '-skip-last-n-block']
     
-    resnet_archs = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152']
-    resnet_pol = ['none', '-drop-rand-n', '-drop-last-rand-n', 'drop-norm-n']
+    densenet_pol = ['-skip-norm-n', '-skip-last-n-block']
+    
+    densenet_archs = [x + y for x in densenet_archs for y in densenet_pol]
+    densenet_archs = [x.replace('-none', '') for x in densenet_archs]
+    
+    #resnet_archs = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152']
+    resnet_archs = ['resnet18', 'resnet34', 'resnet50']
+    resnet_pol = ['-none', '-drop-rand-n', '-drop-last-rand-n', '-drop-norm-n']
+    
     resnet_archs = [x + y for x in resnet_archs for y in resnet_pol]
-    resnet_archs = [x.replace('none', '') for x in resnet_archs]
+    resnet_archs = [x.replace('-none', '') for x in resnet_archs]
     
     args = parser.parse_args()
 
@@ -177,6 +183,10 @@ if __name__ == "__main__":
         arch_pol_tupl_ls.append((fst, snd))
 
     skip_layers_values = [1, 2, 3, 4, 8, 16, 32]
+
+    if 'only_n' in args and args.only_n is not None:
+        skip_layers_values = [args.only_n]
+
     bench_types = ['quality', 'speed']
 
     if args.bench_type is not None:
@@ -197,6 +207,8 @@ if __name__ == "__main__":
     args.reports_path = os.path.join(os.getcwd(), 'reports')
     args.state_path = STATE_DICT_PATH
     args.batch_size = 1 if not 'batch_size' in args else args.batch_size
+
     logging.info(args)
+    quit(0)
     executeBenchmark(args)
 
