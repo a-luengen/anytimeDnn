@@ -90,12 +90,13 @@ def executeBenchmark(args):
             skip_layers_list = args.skip_layers_values
             runs = args.runs
 
-            if pol == 'none' and bench_type == 'quality':
+            arch_name = f'{arch}-{pol}'
+            if pol == 'none':
                 arch_name = arch
-                skip_layers_list = [0]
-                runs = 1
-            else:
-                arch_name = f'{arch}-{pol}'
+                if bench_type == 'quality':
+                    skip_layers_list = [0]
+                    runs = 1                
+
             with tqdm(total=(len(skip_layers_list) * runs), ncols=80, desc=f'Progress-{bench_type}-{arch}-{pol}') as pbar:
                 for skip_n in skip_layers_list:
                     for run in range(runs):
@@ -149,8 +150,10 @@ if __name__ == "__main__":
     densenet_archs = ['densenet121', 'densenet169']
     densenet_pol = ['-none', '-skip', '-skip-last', '-skip-norm-n', '-skip-last-n-block']
     
-    densenet_pol = ['-skip-norm-n', '-skip-last-n-block']
-    
+    #densenet_pol = ['-skip-norm-n', '-skip-last-n-block']
+    densenet_archs = ['densenet121']
+    densenet_pol = ['-none']
+
     densenet_archs = [x + y for x in densenet_archs for y in densenet_pol]
     densenet_archs = [x.replace('-none', '') for x in densenet_archs]
     
@@ -188,7 +191,6 @@ if __name__ == "__main__":
         skip_layers_values = [args.only_n]
 
     bench_types = ['quality', 'speed']
-
     if args.bench_type is not None:
         if args.bench_type == 'quality':
             bench_types = ['quality']
@@ -209,6 +211,6 @@ if __name__ == "__main__":
     args.batch_size = 1 if not 'batch_size' in args else args.batch_size
 
     logging.info(args)
-    quit(0)
+    #quit(0)
     executeBenchmark(args)
 
