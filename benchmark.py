@@ -93,8 +93,8 @@ def executeBenchmark(args):
             arch_name = f'{arch}-{pol}'
             if pol == 'none':
                 arch_name = arch
+                skip_layers_list = [0]
                 if bench_type == 'quality':
-                    skip_layers_list = [0]
                     runs = 1                
 
             with tqdm(total=(len(skip_layers_list) * runs), ncols=80, desc=f'Progress-{bench_type}-{arch}-{pol}') as pbar:
