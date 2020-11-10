@@ -187,6 +187,8 @@ def getModel(arch: str):
         model = tdn.densenet169(num_classes=40)
     elif arch == 'msdnet4':
         model = get_msd_net_model(4)
+    elif arch == 'msdnet10':
+        model = get_msd_net_model(10)
     elif arch == 'msdnet' or arch == 'msdnet5':
         model = get_msd_net_model()
     else:

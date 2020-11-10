@@ -63,7 +63,7 @@ def AddMSDNetArguments(args):
 
         'grFactor': growFactor,
         'bnFactor': bnFactor,
-        'nBlocks': 5,
+        'nBlocks': 10,
         'nChannels': 32,
         'nScales': len(growFactor),
         'reduction': 0.5,
@@ -135,7 +135,7 @@ def main(args):
             os.path.join(
                 os.getcwd(), 
                 CHECKPOINT_DIR, 
-                f"msdnet_{args.epoch}{CHECKPOINT_POSTFIX}"), 
+                f'msdnet10_{args.epoch}{CHECKPOINT_POSTFIX}'), 
             model, 
             optimizer)
 
@@ -161,9 +161,9 @@ def main(args):
             logging.info(f'Best val_prec1 {best_prec1}')
         
         if is_best or epoch % CHECKPOINT_INTERVALL == 0:
-            save_checkpoint(getStateDict(model, epoch, 'msdnet', best_prec1, optimizer),
+            save_checkpoint(getStateDict(model, epoch, 'msdnet10', best_prec1, optimizer),
                             is_best, 
-                            'msdnet', 
+                            'msdnet10', 
                             CHECKPOINT_DIR)
 
         if epoch % args.test_interval == 0:
