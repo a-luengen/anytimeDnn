@@ -121,14 +121,14 @@ def executeQualityBench(args, model_max: Tuple[str, int]):
 
         storeReportToCSV(args.report_path, f'quality-{arch_name}-run.csv', stats)
 
-
 if __name__ == "__main__":
     
     logging.basicConfig(level=logging.INFO)
 
     args = parser.parse_args()
 
-    model_and_max = [('msdnet', 4), ('msdnet', 5)]
+    model_and_max = [('msdnet', 4), ('msdnet', 5), ('msdnet', 10)]
+    model_and_max = [('msdnet', 10)]
     print(args)
     print(model_and_max)
 
