@@ -158,7 +158,7 @@ if __name__ == "__main__":
     densenet_archs = [x.replace('-none', '') for x in densenet_archs]
     
     #resnet_archs = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152']
-    resnet_archs = ['resnet18', 'resnet34', 'resnet50']
+    resnet_archs = ['resnet101']
     resnet_pol = ['-none', '-drop-rand-n', '-drop-last-rand-n', '-drop-norm-n']
     
     resnet_archs = [x + y for x in resnet_archs for y in resnet_pol]
