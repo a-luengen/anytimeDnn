@@ -18,10 +18,9 @@ import msdnet.models
 from utils import *
 from data.ImagenetDataset import get_zipped_dataloaders, REDUCED_SET_PATH, FULL_SET_PATH
 
-RUN_PATH = 'runs/'
 DATA_PATH = FULL_SET_PATH
 DEBUG_ITERATIONS = 3
-STAT_FREQUENCY = 200
+STAT_FREQUENCY = 100
 LEARNING_RATE = 0.1
 MOMENTUM = 0.9
 WEIGHT_DECAY = 1e-4
@@ -123,14 +122,14 @@ def main(args):
 
 
 
-    calc_lr = lambda epoch: epoch // 30
+    calc_lr = lambda epoch: args.lr ** (1 + epoch // 30)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=calc_lr)
 
     train_loader, val_loader, test_loader = get_zipped_dataloaders(args.data_root, args.batch_size, use_valid=True)
 
     best_prec1, best_epoch, start_epoch = 0.0, 0, 0
 
-    if 'epoch' in args and args.epoch:
+    if hasattr(args, 'epoch') and args.epoch: # RESUME
         model, optimizer, start_epoch, best_prec1  = resumeFromPath(
             os.path.join(
                 os.getcwd(), 
@@ -139,8 +138,8 @@ def main(args):
             model, 
             optimizer)
 
-    for epoch in range(start_epoch, EPOCHS, 1):
-        logging.info(f"Started Epoch{epoch + 1}/{EPOCHS}")
+    for epoch in range(start_epoch, EPOCHS):
+        logging.info(f"Started Epoch {epoch + 1}/{EPOCHS}")
         # train()
         train_loss, train_prec1, train_prec5, lr = train(train_loader, model, criterion, optimizer, scheduler, epoch)
         logging.info('******** Train result: *********')
@@ -282,33 +281,22 @@ def train(train_loader, model, criterion, optimizer, scheduler, epoch):
                 f'Train - Epoch: [{epoch}][{i + 1}/{len(train_loader)}]\t'
                 f'Time {batch_time.avg:.3f}\t'
                 f'Data {data_time.avg:.3f}\t'
-                f'Loss {losses.val:.4f}\t'
-                f'Acc@1 {top1[-1].val:.4f}\t'
-                f'Acc@5 {top5[-1].val:.4f}')
+                f'Loss {losses.val:.4f}')
+
+            text = f'Train - Epoch: [{epoch}][{i + 1}/{len(train_loader)}] Acc@1: '
+            for j in range(len(output)):
+                text += f'c{j}={top1[j].avg:.4f} '
+            logging.info(text)
+            
+            text = f'Train - Epoch: [{epoch}][{i + 1}/{len(train_loader)}] Acc@5: '
+            for j in range(len(output)):
+                text += f'c{j}={top5[j].avg:.4f} '
+            logging.info(text)
 
         if args.debug and i == DEBUG_ITERATIONS:
             return losses.avg, top1[-1].avg, top5[-1].avg, running_lr
 
     return losses.avg, top1[-1].avg, top5[-1].avg, running_lr
-
-def adjust_learning_rate(optimizer, epoch, args, batch=None,
-                         nBatch=None, method='multistep'):
-    if method == 'cosine':
-        T_total = args.epochs * nBatch
-        T_cur = (epoch % args.epochs) * nBatch + batch
-        lr = 0.5 * args.lr * (1 + math.cos(math.pi * T_cur / T_total))
-    elif method == 'multistep':
-        if args.data.startswith('cifar'):
-            lr, decay_rate = args.lr, 0.1
-            if epoch >= args.epochs * 0.75:
-                lr *= decay_rate ** 2
-            elif epoch >= args.epochs * 0.5:
-                lr *= decay_rate
-        else:
-            lr = args.lr * (0.1 ** (epoch // 30))
-    for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
-    return lr
   
 def accuracy(output, target, topk=(1,)):
     """Computes accuracy over the k top predictions for the values of k"""
