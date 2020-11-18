@@ -139,7 +139,7 @@ def main(args):
         best_acc = max(acc, best_acc)
         
         # safe model
-        if epoch % CHECKPOINT_INTERVALL == 0 or is_best or IS_DEBUG:
+        if epoch % CHECKPOINT_INTERVALL == 0 or is_best or IS_DEBUG or epoch == EPOCHS - 1:
             start = time.time()
             save_checkpoint(
                 getStateDict(
