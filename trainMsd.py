@@ -39,7 +39,7 @@ parser = argparse.ArgumentParser(description='Train several image classification
 parser.add_argument('--arch', '-a', metavar='ARCH_NAME', type=str, default='msdnet', 
     choices=ARCH_NAMES, 
     help='Specify which kind of network architecture to train.')
-parser.add_argument('--epoch', metavar='N', type=int, default=0, help='Resume training from the given epoch. 0-based from [0..n-1]')
+parser.add_argument('--epoch', metavar='N', type=int, default=START_EPOCH, help='Resume training from the given epoch. 0-based from [0..n-1]')
 parser.add_argument('--batch', metavar='N', type=int, default=BATCH_SIZE, help='Batchsize for training or validation run.')
 parser.add_argument('--debug', dest='debug', action='store_true')
 parser.set_defaults(feature=False)
@@ -138,7 +138,7 @@ def main(args):
             model, 
             optimizer)
 
-    for epoch in range(start_epoch - 1, args.epochs):
+    for epoch in range(start_epoch, args.epochs):
         logging.info(f"Started Epoch {epoch + 1}/{args.epochs}")
         # train()
         train_loss, train_prec1, train_prec5, lr = train(train_loader, model, criterion, optimizer, scheduler, epoch)
