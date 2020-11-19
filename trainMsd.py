@@ -33,14 +33,14 @@ CHECKPOINT_DIR = 'checkpoints'
 LOG_FLOAT_PRECISION = ':6.4f'
 BATCH_SIZE = 8
 
-ARCH_NAMES = ['msdnet']
+ARCH_NAMES = ['msdnet', 'msdnet5', 'msdnet10']
 
 parser = argparse.ArgumentParser(description='Train several image classification network architectures.')
 parser.add_argument('--arch', '-a', metavar='ARCH_NAME', type=str, default='msdnet', 
     choices=ARCH_NAMES, 
     help='Specify which kind of network architecture to train.')
-parser.add_argument('--epoch', metavar='N', type=int, default=argparse.SUPPRESS, help='Resume training from the given epoch. 0-based from [0..n-1]')
-parser.add_argument('--batch', metavar='N', type=int, default=argparse.SUPPRESS, help='Batchsize for training or validation run.')
+parser.add_argument('--epoch', metavar='N', type=int, default=0, help='Resume training from the given epoch. 0-based from [0..n-1]')
+parser.add_argument('--batch', metavar='N', type=int, default=BATCH_SIZE, help='Batchsize for training or validation run.')
 parser.add_argument('--debug', dest='debug', action='store_true')
 parser.set_defaults(feature=False)
 
@@ -54,7 +54,7 @@ def AddMSDNetArguments(args):
         'data': 'ImageNet',
         'save': os.path.join(os.getcwd(), 'save'),
         'evalmode': None,
-        'epoch': START_EPOCH,
+        'epoch': args.epoch,
         'epochs': EPOCHS,
         'arch': 'msdnet',
         'seed': 42,
@@ -79,7 +79,7 @@ def AddMSDNetArguments(args):
         'weight_decay': WEIGHT_DECAY,
         'resume': False,
         'data_root': DATA_PATH,
-        'batch_size': BATCH_SIZE,
+        'batch_size': args.batch,
         'workers': 1,
         'print_freq': STAT_FREQUENCY
     } 
@@ -138,8 +138,8 @@ def main(args):
             model, 
             optimizer)
 
-    for epoch in range(start_epoch, EPOCHS):
-        logging.info(f"Started Epoch {epoch + 1}/{EPOCHS}")
+    for epoch in range(start_epoch - 1, args.epochs):
+        logging.info(f"Started Epoch {epoch + 1}/{args.epochs}")
         # train()
         train_loss, train_prec1, train_prec5, lr = train(train_loader, model, criterion, optimizer, scheduler, epoch)
         logging.info('******** Train result: *********')
@@ -320,6 +320,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     AddMSDNetArguments(args)
+    print('Training parameters in args:')
+    print(args)
 
     if args.debug:
         logging.basicConfig(level=logging.DEBUG)
