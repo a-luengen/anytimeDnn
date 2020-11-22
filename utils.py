@@ -140,11 +140,11 @@ def getModelWithOptimized(arch: str, n=0, batch_size=None):
         return tdn.densenet121(num_classes=40, use_skipping=True)
 
     elif arch == 'densenet121-skip-last-n-block':
-        dndrop.setSkipPolicy(dndrop.DNDropLastNOfEachBlockPolicy(dnn169_config, n))
+        dndrop.setSkipPolicy(dndrop.DenseNetDropLastNBlockwisePolicy(dnn169_config, n))
         return tdn.densenet121(num_classes=40, use_skipping=True)
     
     elif arch == 'densenet121-skip-norm-n':
-        dndrop.setSkipPolicy(dndrop.DNDropNormalDistributedN(dnn121_config, n))
+        dndrop.setSkipPolicy(dndrop.DenseNetDropNormalDistributedNPolicy(dnn121_config, n))
         return tdn.densenet121(num_classes=40, use_skipping=True)
     
     elif arch == 'densenet169-skip':
@@ -156,11 +156,11 @@ def getModelWithOptimized(arch: str, n=0, batch_size=None):
         return tdn.densenet169(num_classes=40, use_skipping=True)
 
     elif arch == 'densenet169-skip-last-n-block':
-        dndrop.setSkipPolicy(dndrop.DNDropLastNOfEachBlockPolicy(dnn169_config, n))
+        dndrop.setSkipPolicy(dndrop.DenseNetDropLastNBlockwisePolicy(dnn169_config, n))
         return tdn.densenet169(num_classes=40, use_skipping=True)
     
     elif arch == 'densenet169-skip-norm-n':
-        dndrop.setSkipPolicy(dndrop.DNDropNormalDistributedN(dnn169_config, n))
+        dndrop.setSkipPolicy(dndrop.DenseNetDropNormalDistributedNPolicy(dnn169_config, n))
         return tdn.densenet169(num_classes=40, use_skipping=True)
     else:
         return getModel(arch)

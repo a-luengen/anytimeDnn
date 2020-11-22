@@ -74,7 +74,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
 
         test_net.forward(torch.rand(1, 3, 224, 224))
 
-        self.assertEqual( sum(test_policy.getDropConfig()) , test_n )
+        self.assertEqual( sum(test_policy.getSkipConfigurationList()) , test_n )
     
     def test09_getModelWithOptimized_returnsResNet18_policyIsSet(self):
         test_n = 3
@@ -83,7 +83,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
         self.assertIsNotNone(model)
         self.assertIsNotNone(res_policy)
         self.assertTrue(isinstance(res_policy, resnet.DropPolicies.ResNetDropRandNPolicy))
-        self.assertEqual(sum(res_policy.getDropConfig()), test_n)
+        self.assertEqual(sum(res_policy.getSkipConfigurationList()), test_n)
     
     def test095_getModelWithOptimized_returnsResNet34_AndPolicyIsSet(self):
         test_n = 5
@@ -94,7 +94,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
         self.assertIsNotNone(model)
         self.assertIsNotNone(res_policy)
         self.assertIsInstance(res_policy, resnet.DropPolicies.ResNetDropRandNPolicy)
-        self.assertEqual(sum(res_policy.getDropConfig()), test_n)
+        self.assertEqual(sum(res_policy.getSkipConfigurationList()), test_n)
     
     def test097_getModelWithOptimized_returnsResNet18_AndDropLastRandNPolicyIsSet(self):
         test_n = 2
@@ -105,7 +105,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
         self.assertIsNotNone(model)
         self.assertIsNotNone(res_policy)
         self.assertIsInstance(res_policy, resnet.DropPolicies.ResNetDropRandLastNPolicy)
-        self.assertEqual(sum(res_policy.getDropConfig()), test_n)
+        self.assertEqual(sum(res_policy.getSkipConfigurationList()), test_n)
     
 
     def test100_resnet18_withDropRandNPolicy_Forward2Times_noException(self):
@@ -126,7 +126,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
         policy = resnet.DropPolicies.ResNetDropRandLastNPolicy(test_n)
         policy.setMaxSkipableLayers(test_max_layers)
 
-        config_list = policy.getDropConfig()
+        config_list = policy.getSkipConfigurationList()
 
         self.assertEqual(test_n, sum(config_list))
     
@@ -139,7 +139,7 @@ class TestResnetSkippingPolicies(unittest.TestCase):
 
         policy.setMaxSkipableLayers(test_max_layers)
 
-        config_list = policy.getDropConfig()
+        config_list = policy.getSkipConfigurationList()
 
         false_list = config_list[0:test_max_layers - 4]
         true_list = config_list[test_max_layers - 4:test_max_layers]

@@ -74,7 +74,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         test_policy = densenet.DropPolicies.DenseNetDropRandNPolicy(test_block_config, test_n)
 
         for i, count in enumerate(test_block_config):
-            layer_config = test_policy.getDropLayerConfiguration(i)
+            layer_config = test_policy.getSkipConfigurationListOfBlock(i)
             self.assertEqual(len(layer_config), count)
     
     def test060_DenseNetDropRandNPolicy_ConfigurationContainsExactNTrueValues(self):
@@ -82,7 +82,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         test_n = 5
         test_policy = densenet.DropPolicies.DenseNetDropRandNPolicy(test_block_config, test_n)
 
-        l_of_l = [test_policy.getDropLayerConfiguration(i) for i in range(len(test_block_config))]
+        l_of_l = [test_policy.getSkipConfigurationListOfBlock(i) for i in range(len(test_block_config))]
 
         # flatten list
         flat_list = [item for l in l_of_l for item in l]
@@ -231,43 +231,43 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
             self.assertIsNotNone(policy)
             self.assertIsInstance(policy, densenet.DropPolicies.DenseNetDropLastNPolicy)
     
-    def test150_DNDropLastNOfEachBlockPolicy_HasCorrectAmountOfSkips(self):
+    def test150_DenseNetDropLastNBlockwisePolicy_HasCorrectAmountOfSkips(self):
 
         test_block_config = (3, 3, 3, 3)
         test_n = 4
 
-        test_policy = densenet.DropPolicies.DNDropLastNOfEachBlockPolicy(test_block_config, test_n)
+        test_policy = densenet.DropPolicies.DenseNetDropLastNBlockwisePolicy(test_block_config, test_n)
 
         resulting_skips = 0
         for i in range(len(test_block_config)):
-            resulting_skips += sum(test_policy.getDropLayerConfiguration(i))
+            resulting_skips += sum(test_policy.getSkipConfigurationListOfBlock(i))
         
         self.assertIsNotNone(test_policy)
         self.assertNotEqual(0, len(test_policy.getFullConfig()))
         self.assertEqual(resulting_skips, test_n)
         
-    def test160_DNDropLastNOfEachBlockPolicy_HasCorrectAmountOfSkipsPerLayer(self):
+    def test160_DenseNetDropLastNBlockwisePolicy_HasCorrectAmountOfSkipsPerLayer(self):
         test_block_config = (3, 3, 3, 3, 3)
         test_n = 10
 
         expected_skips_per_layer = test_n // len(test_block_config)
 
-        test_policy = densenet.DropPolicies.DNDropLastNOfEachBlockPolicy(test_block_config, test_n)
+        test_policy = densenet.DropPolicies.DenseNetDropLastNBlockwisePolicy(test_block_config, test_n)
 
         for i in range(len(test_block_config)):
-            self.assertEqual(sum(test_policy.getDropLayerConfiguration(i)), expected_skips_per_layer)
+            self.assertEqual(sum(test_policy.getSkipConfigurationListOfBlock(i)), expected_skips_per_layer)
     
-    def test170_DNDropLastNOfEachBlockPolicy_HasCorrectAmountOfSkipsPerLayer(self):
+    def test170_DenseNetDropLastNBlockwisePolicy_HasCorrectAmountOfSkipsPerLayer(self):
         test_block_config = (3, 1, 3, 1)
         test_n = 6
         expected_skips_per_layer = [2, 1, 2, 1]
 
-        test_policy = densenet.DropPolicies.DNDropLastNOfEachBlockPolicy(test_block_config, test_n)
+        test_policy = densenet.DropPolicies.DenseNetDropLastNBlockwisePolicy(test_block_config, test_n)
 
         for i, amount in enumerate(expected_skips_per_layer):
-            self.assertEqual(sum(test_policy.getDropLayerConfiguration(i)), amount)
+            self.assertEqual(sum(test_policy.getSkipConfigurationListOfBlock(i)), amount)
         
-    def test180_DenseNet121_WithDNDropLastNOfEachBlockPolicy_NoExceptionOnForward_WithMaxBlocksToDrop(self):
+    def test180_DenseNet121_WithDenseNetDropLastNBlockwisePolicy_NoExceptionOnForward_WithMaxBlocksToDrop(self):
         
         block_config = (6, 12, 24, 16)
 
@@ -279,7 +279,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
 
         test_net(test_tensor)
     
-    def test190_DenseNet169_WithDNDropLastNOfEachBlockPolicy_NoExceptionOnForward_WithMaxBlocksToDrop(self):
+    def test190_DenseNet169_WithDenseNetDropLastNBlockwisePolicy_NoExceptionOnForward_WithMaxBlocksToDrop(self):
         block_config = (6, 12, 32, 32)
 
         test_n, test_batch = sum(block_config), 3
@@ -292,20 +292,20 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
 
         result_skip_sum = 0
         for i in range(len(block_config)):
-            result_skip_sum += sum(densenet.DropPolicies.getSkipPolicy().getDropLayerConfiguration(i))
+            result_skip_sum += sum(densenet.DropPolicies.getSkipPolicy().getSkipConfigurationListOfBlock(i))
 
         self.assertEqual(result_skip_sum, test_n)
     
-    def test200_DNDropNormalDistributedN_ExactlyNLayersToDrop(self):
+    def test200_DenseNetDropNormalDistributedNPolicy_ExactlyNLayersToDrop(self):
 
         test_block_config = (4, 10, 2, 3)
         test_n = 10
 
-        test_policy = densenet.DropPolicies.DNDropNormalDistributedN(test_block_config, test_n)
+        test_policy = densenet.DropPolicies.DenseNetDropNormalDistributedNPolicy(test_block_config, test_n)
 
         res_drop = 0
         for i in range(len(test_block_config)):
-            layer_conf = test_policy.getDropLayerConfiguration(i)
+            layer_conf = test_policy.getSkipConfigurationListOfBlock(i)
             self.assertEqual(len(layer_conf), test_block_config[i])
             res_drop += sum(layer_conf)
         
@@ -323,4 +323,4 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
             model = utils.getModelWithOptimized(arch + '-' + test_pol_name, test_n, test_batch)
             res_pol = densenet.DropPolicies.getSkipPolicy()
             self.assertIsNotNone(res_pol)
-            self.assertIsInstance(res_pol, densenet.DropPolicies.DNDropNormalDistributedN)
+            self.assertIsInstance(res_pol, densenet.DropPolicies.DenseNetDropNormalDistributedNPolicy)

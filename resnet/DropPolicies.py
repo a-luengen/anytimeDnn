@@ -48,7 +48,7 @@ class ResNetDropRandNPolicy(ResnetDropResidualPolicy):
         self.skipConfigurationList = r_util.getRandomBoolListPermutation(maxCount, self._n)
         self._isMaxSet = True
     
-    def getDropConfig(self)->List[bool]:
+    def getSkipConfigurationList(self)->List[bool]:
         return self.skipConfigurationList
 
 class ResNetDropRandLastNPolicy(ResNetDropRandNPolicy):

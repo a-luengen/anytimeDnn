@@ -7,7 +7,7 @@ class DenseNetDropPolicy(object):
         self.block_config = block_config
         self.blockSkippingConfiguration = []
     
-    def getDropLayerConfiguration(self, layer_id: int):
+    def getSkipConfigurationListOfBlock(self, layerIdx: int):
         raise NotImplementedError("Function should be called from within its child classes.")
     
     def getFullConfig(self):
@@ -24,8 +24,8 @@ class DenseNetDropNPolicy(DenseNetDropPolicy):
         self._n = n
         self.blockSkippingConfiguration = []
     
-    def getDropLayerConfiguration(self, idx: int):
-        return self.blockSkippingConfiguration[idx]
+    def getSkipConfigurationListOfBlock(self, layerIdx: int):
+        return self.blockSkippingConfiguration[layerIdx]
 
 class DenseNetDropRandNPolicy(DenseNetDropNPolicy):
 
@@ -66,11 +66,8 @@ class DenseNetDropLastNPolicy(DenseNetDropNPolicy):
         
         self.blockSkippingConfiguration = [temp_perm[i:j].tolist() for i, j in temp_split]
         self.blockSkippingConfiguration = [sorted(x) for x in self.blockSkippingConfiguration]
-
-    def getDropLayerConfiguration(self, layer_id: int):
-        return self.blockSkippingConfiguration[layer_id]
         
-class DNDropLastNOfEachBlockPolicy(DenseNetDropNPolicy):
+class DenseNetDropLastNBlockwisePolicy(DenseNetDropNPolicy):
     """
         Drops a total of N-Layers from the Network, by evenly dropping the last layer
         from each block, until N-Layers are dropped. Starting from the last block on.
@@ -79,7 +76,7 @@ class DNDropLastNOfEachBlockPolicy(DenseNetDropNPolicy):
     name = 'skip-last-n-block'
 
     def __init__(self, block_config, n: int):
-        super(DNDropLastNOfEachBlockPolicy, self).__init__(block_config, n)
+        super(DenseNetDropLastNBlockwisePolicy, self).__init__(block_config, n)
 
         layer_config = []
         for block in block_config:
@@ -105,7 +102,7 @@ class DNDropLastNOfEachBlockPolicy(DenseNetDropNPolicy):
 
         self.blockSkippingConfiguration = layer_config
 
-class DNDropNormalDistributedN(DenseNetDropNPolicy):
+class DenseNetDropNormalDistributedNPolicy(DenseNetDropNPolicy):
     """
         Drops N-Layers from a DenseNet choosen by Normal-Distribution.
     """
@@ -113,7 +110,7 @@ class DNDropNormalDistributedN(DenseNetDropNPolicy):
     name = 'skip-norm-n'
 
     def __init__(self, block_config, n):
-        super(DNDropNormalDistributedN, self).__init__(block_config, n)
+        super(DenseNetDropNormalDistributedNPolicy, self).__init__(block_config, n)
 
 
         layer_config = getGaussDistributedBoolList(sum(block_config), n)
