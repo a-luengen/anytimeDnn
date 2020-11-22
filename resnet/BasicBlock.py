@@ -9,11 +9,6 @@ import torch.nn as nn
 class BasicBlock(nn.Module):
     """Basic Block for resnet 18 and resnet 34
     """
-
-    #BasicBlock and BottleNeck block 
-    #have different output size
-    #we use class attribute expansion
-    #to distinct
     expansion = 1
 
     def __init__(self, in_channels, out_channels, stride=1, dropResidualPolicy=None):

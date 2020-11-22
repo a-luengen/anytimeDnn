@@ -131,38 +131,19 @@ class _DenseBlockWithSkip(nn.ModuleDict):
                 memory_efficient=memory_efficient,
             )
 
-            #if i == self.drop_layer:
-            #    print("DROPPED LAYER:\n")
-            #print(i, layer)
-            #if i == self.drop_layer:
-            #    print("\nDROPPED LAYER^^^^^^^^^\n")
-
             self.add_module('denselayer%d' % (i + 1), layer)
 
     def forward(self, init_features):
         features = [init_features]
-        #prev_features = init_features
-        #print(f"Initial features shape: {init_features.shape}")
         replacement = self.layer_tensor_replacement[init_features.shape[2]]
-        #print(f"Replacement: {replacement.shape}")
 
         for i, (_, layer) in enumerate(self.items()):
             if self.layer_skip_config[i]:
-                #print(f"Skipping layer {i+1}")
-
-                #print(f"Replacing with {replacement.shape}")
                 features.append(replacement[0:init_features.shape[0]])
                 continue
-            #print(f"Before passthrough: {len(features)}")
+
             new_features = layer(features)
-            #print(f"Resulting features: {len(new_features)}")
-            #print(new_features.shape)
             features.append(new_features)
-            #print(f"New appended features: {len(features)}")
-            #prev_features = new_features
-        #print(f"Resulting forwardpass shape: {cattenated.shape}")
-        #for feat in features:
-        #    print(feat.shape)
         return torch.cat(features, 1)
 
 class _DenseBlock(nn.ModuleDict):
@@ -181,9 +162,6 @@ class _DenseBlock(nn.ModuleDict):
             )
             
             self.add_module('denselayer%d' % (i + 1), layer)
-
-        #for i, (_, layer) in enumerate(self.items()):
-        #    print(f"{i}\n {layer}")
 
     def forward(self, init_features):
         features = [init_features]
@@ -263,16 +241,12 @@ class DenseNet(nn.Module):
                 )
             self.features.add_module('denseblock%d' % (i + 1), block)
             
-            
             num_features = num_features + num_layers * growth_rate# - growth_rate# adjust this value, to the amount of dropped layers
 
             if i != len(block_config) - 1:
-
                 trans = _Transition(num_input_features=num_features,
                                     num_output_features=num_features // 2)
-
                 self.features.add_module('transition%d' % (i + 1), trans)
-                
                 num_features = num_features // 2
 
         # Final batch norm

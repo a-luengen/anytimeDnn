@@ -9,7 +9,8 @@ class CustIdent(nn.Identity):
         return x
 
 class BottleNeck(nn.Module):
-    """Residual block for resnet over 50 layers
+    """
+        A Residual block for resnet over 50 layers
     """
     dropPolicy = None
     expansion = 4
@@ -29,8 +30,7 @@ class BottleNeck(nn.Module):
             nn.Conv2d(out_channels, out_channels * BottleNeck.expansion, kernel_size=1, bias=False),
             nn.BatchNorm2d(out_channels * BottleNeck.expansion),
         )
-        
-        # shortcut
+
         self.shortcut = nn.Sequential()
 
         # adjust shortcut values to match with residual
