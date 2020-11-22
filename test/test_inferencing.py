@@ -59,7 +59,7 @@ class TestInferencing(unittest.TestCase):
         self.assertEqual(len(label_to_class_val), len(label_to_class))
         self.assertEqual(label_to_class_val, label_to_class)
 
-    def test040_DenseNetWithDNDropLastNPolicy_NoExcpetion_OnForwardingWithBatchSize(self):
+    def test040_DenseNetWithDenseNetDropLastNPolicy_NoExcpetion_OnForwardingWithBatchSize(self):
         test_batch_size = 8
         test_loader, _ , _ = get_zipped_dataloaders(self.TEST_DATASET_PATH, test_batch_size)
 

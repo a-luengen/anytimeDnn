@@ -45,7 +45,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         skipnet(test_t)
         pass
     
-    def test040_DNDropRandNPolicy_initWithoutException(self):
+    def test040_DenseNetDropRandNPolicy_initWithoutException(self):
         test_block_config = (1, 1, 1)
 
         test_policy = densenet.DropPolicies.DenseNetDropPolicy(test_block_config)
@@ -68,19 +68,19 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         for l, r in zip(list_res, list_base):
             self.assertEqual(len(l), r)
 
-    def test050_DNDropRandNPolicy_getLayerConfiguration_ReturnsCorrectAmountOfElementsPerLayer(self):
+    def test050_DenseNetDropRandNPolicy_getLayerConfiguration_ReturnsCorrectAmountOfElementsPerLayer(self):
         test_block_config = (3, 4, 5)
         test_n = 4
-        test_policy = densenet.DropPolicies.DNDropRandNPolicy(test_block_config, test_n)
+        test_policy = densenet.DropPolicies.DenseNetDropRandNPolicy(test_block_config, test_n)
 
         for i, count in enumerate(test_block_config):
             layer_config = test_policy.getDropLayerConfiguration(i)
             self.assertEqual(len(layer_config), count)
     
-    def test060_DNDropRandNPolicy_ConfigurationContainsExactNTrueValues(self):
+    def test060_DenseNetDropRandNPolicy_ConfigurationContainsExactNTrueValues(self):
         test_block_config = (4, 3, 2)
         test_n = 5
-        test_policy = densenet.DropPolicies.DNDropRandNPolicy(test_block_config, test_n)
+        test_policy = densenet.DropPolicies.DenseNetDropRandNPolicy(test_block_config, test_n)
 
         l_of_l = [test_policy.getDropLayerConfiguration(i) for i in range(len(test_block_config))]
 
@@ -99,27 +99,27 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
     def test067_GetSkipPolicy_ReturnsPreviouslySetPolicy_WithExactConfiguration(self):
         test_block_config = (6, 12, 24, 16)
         test_n = 10
-        test_pol = densenet.DropPolicies.DNDropRandNPolicy(test_block_config, test_n)
+        test_pol = densenet.DropPolicies.DenseNetDropRandNPolicy(test_block_config, test_n)
         densenet.DropPolicies.setSkipPolicy(test_pol)
 
         ret_pol = densenet.DropPolicies.getSkipPolicy()
 
         self.assertEqual(ret_pol.getFullConfig, test_pol.getFullConfig)
 
-    def test068_DNDropRandNPolicy_WihtMoreNThanPossible_ShouldThrowException(self):
+    def test068_DenseNetDropRandNPolicy_WihtMoreNThanPossible_ShouldThrowException(self):
         test_block_config = (2, 3, 4)
         test_n = 10
 
         self.assertRaises(
             ValueError, 
-            densenet.DropPolicies.DNDropRandNPolicy,
+            densenet.DropPolicies.DenseNetDropRandNPolicy,
             test_block_config, 
             test_n
             )
 
     def test070_DenseNetWithoutBlockConfig_SameResultAsPlainResnet(self):
         
-        test_policy = densenet.DropPolicies.DNDropRandNPolicy((6, 12, 24, 16), 0)
+        test_policy = densenet.DropPolicies.DenseNetDropRandNPolicy((6, 12, 24, 16), 0)
         densenet.DropPolicies.setSkipPolicy(test_policy)
 
         skip_net = densenet.torchDensenet.densenet121(num_classes=40, use_skipping=True)
@@ -139,11 +139,11 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
 
             self.assertTrue(torch.equal(res_skip, res_plain))
         
-    def test080_DNDropLastNPolicy_hasOnlyLastBlockConfigEntries_setToTrue(self):
+    def test080_DenseNetDropLastNPolicy_hasOnlyLastBlockConfigEntries_setToTrue(self):
         test_block_config = (5, 3, 2)
         test_n = 5
 
-        policy_under_test = densenet.DropPolicies.DNDropLastNPolicy(test_block_config, test_n)
+        policy_under_test = densenet.DropPolicies.DenseNetDropLastNPolicy(test_block_config, test_n)
 
         res_full_config = policy_under_test.getFullConfig()
 
@@ -155,7 +155,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         self.assertEqual(sum(temp), test_n)
         self.assertEqual(exp_full_config, res_full_config)
     
-    def test090_DenseNet169_WithDNDropLastNPolicy_NoExceptionOnForward(self):
+    def test090_DenseNet169_WithDenseNetDropLastNPolicy_NoExceptionOnForward(self):
         test_n = 3
         test_batch = 8
 
@@ -168,7 +168,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         self.assertIsNotNone(output)
         self.assertEqual(output.shape[0], test_batch)
     
-    def test100_DenseNet169_WithDNDropLastNPolicy_MaximumN_NoExceptionOnForward(self):
+    def test100_DenseNet169_WithDenseNetDropLastNPolicy_MaximumN_NoExceptionOnForward(self):
         max_n = 72
         test_batch = 8
         
@@ -181,7 +181,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
         self.assertIsNotNone(output)
         self.assertEqual(output.shape[0], test_batch)
     
-    def test110_DenseNet121_WithDNDropLastNPolicy_MaximumN_NoExceptionOnForward(self):
+    def test110_DenseNet121_WithDenseNetDropLastNPolicy_MaximumN_NoExceptionOnForward(self):
         max_n = 58
         test_batch = 8
 
@@ -216,7 +216,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
             policy = densenet.DropPolicies.getSkipPolicy()
 
             self.assertIsNotNone(policy)
-            self.assertIsInstance(policy, densenet.DropPolicies.DNDropRandNPolicy)
+            self.assertIsInstance(policy, densenet.DropPolicies.DenseNetDropRandNPolicy)
 
     def test140_ForAllDenseNetArchs_SkipLastNPolicyIsSet_OnGetModelWithOptimized(self):
 
@@ -229,7 +229,7 @@ class TestDenseNetSkippingPolicies(unittest.TestCase):
             policy = densenet.DropPolicies.getSkipPolicy()
 
             self.assertIsNotNone(policy)
-            self.assertIsInstance(policy, densenet.DropPolicies.DNDropLastNPolicy)
+            self.assertIsInstance(policy, densenet.DropPolicies.DenseNetDropLastNPolicy)
     
     def test150_DNDropLastNOfEachBlockPolicy_HasCorrectAmountOfSkips(self):
 

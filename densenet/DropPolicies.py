@@ -5,13 +5,13 @@ SKIP_POLICY = {'policy': None}
 class DenseNetDropPolicy(object):
     def __init__(self, block_config):
         self.block_config = block_config
-        self.block_layer_config = []
+        self.blockSkippingConfiguration = []
     
     def getDropLayerConfiguration(self, layer_id: int):
         raise NotImplementedError("Function should be called from within its child classes.")
     
     def getFullConfig(self):
-        return self.block_layer_config
+        return self.blockSkippingConfiguration
 
 class DenseNetDropNPolicy(DenseNetDropPolicy):
     def __init__(self, block_config, n: int):
@@ -22,17 +22,17 @@ class DenseNetDropNPolicy(DenseNetDropPolicy):
         if n > max_layers:
             raise ValueError('Value for n is to heigh. Cannot drop more Layers than possible.')
         self._n = n
-        self.block_layer_config = []
+        self.blockSkippingConfiguration = []
     
     def getDropLayerConfiguration(self, idx: int):
-        return self.block_layer_config[idx]
+        return self.blockSkippingConfiguration[idx]
 
-class DNDropRandNPolicy(DenseNetDropNPolicy):
+class DenseNetDropRandNPolicy(DenseNetDropNPolicy):
 
     name = 'skip'
 
     def __init__(self, block_config, n):
-        super(DNDropRandNPolicy, self).__init__(block_config, n)
+        super(DenseNetDropRandNPolicy, self).__init__(block_config, n)
 
         # generate random 
         temp_perm = getRandomBoolListPermutation(sum(block_config), n)
@@ -43,9 +43,9 @@ class DNDropRandNPolicy(DenseNetDropNPolicy):
             temp_split.append((prev_val, prev_val + i))
             prev_val += i
         
-        self.block_layer_config = [temp_perm[i:j] for i, j in temp_split]
+        self.blockSkippingConfiguration = [temp_perm[i:j] for i, j in temp_split]
 
-class DNDropLastNPolicy(DenseNetDropNPolicy):
+class DenseNetDropLastNPolicy(DenseNetDropNPolicy):
     """
         Drops a random amount of last layers within a block, but always 
         exactly n layers.
@@ -54,7 +54,7 @@ class DNDropLastNPolicy(DenseNetDropNPolicy):
     name = 'skip-last'
 
     def __init__(self, block_config, n:int):
-        super(DNDropLastNPolicy, self).__init__(block_config, n)
+        super(DenseNetDropLastNPolicy, self).__init__(block_config, n)
 
         temp_perm = getRandomBoolListPermutation(sum(block_config), n)
         
@@ -64,11 +64,11 @@ class DNDropLastNPolicy(DenseNetDropNPolicy):
             temp_split.append((prev_val, prev_val + i))
             prev_val += i
         
-        self.block_layer_config = [temp_perm[i:j].tolist() for i, j in temp_split]
-        self.block_layer_config = [sorted(x) for x in self.block_layer_config]
+        self.blockSkippingConfiguration = [temp_perm[i:j].tolist() for i, j in temp_split]
+        self.blockSkippingConfiguration = [sorted(x) for x in self.blockSkippingConfiguration]
 
     def getDropLayerConfiguration(self, layer_id: int):
-        return self.block_layer_config[layer_id]
+        return self.blockSkippingConfiguration[layer_id]
         
 class DNDropLastNOfEachBlockPolicy(DenseNetDropNPolicy):
     """
@@ -103,7 +103,7 @@ class DNDropLastNOfEachBlockPolicy(DenseNetDropNPolicy):
             if has_picked:
                 skips_to_take -= 1
 
-        self.block_layer_config = layer_config
+        self.blockSkippingConfiguration = layer_config
 
 class DNDropNormalDistributedN(DenseNetDropNPolicy):
     """
@@ -118,14 +118,13 @@ class DNDropNormalDistributedN(DenseNetDropNPolicy):
 
         layer_config = getGaussDistributedBoolList(sum(block_config), n)
 
-
         prev_val = 0
         temp_split = []
         for i in block_config:
             temp_split.append((prev_val, prev_val + i))
             prev_val += i
         
-        self.block_layer_config = [layer_config[i:j] for i, j in temp_split]
+        self.blockSkippingConfiguration = [layer_config[i:j] for i, j in temp_split]
 
 
 def setSkipPolicy(policy):
