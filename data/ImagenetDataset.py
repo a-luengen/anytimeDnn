@@ -7,7 +7,10 @@ import numpy as np
 import time
 from PIL import Image
 import dareblopy as db
-from data.utils import getClassToIndexMapping
+try:
+    from data.utils import getClassToIndexMapping
+except: 
+    from utils import getClassToIndexMapping
 
 IMAGE_SIZE = (256, 256)
 IMAGE_CROP_SIZE = (224, 224)
