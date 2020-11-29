@@ -5,7 +5,7 @@ import os
 from sklearn import metrics
 from timeit import default_timer as timer
 from utils import getModel, resumeFromPath
-from data.ImagenetDataset import get_zipped_dataloaders, REDUCED_SET_PATH
+from data.ImagenetDataset import get_zipped_dataloaders, REDUCED_SET_PATH, FULL_SET_PATH
 from data.utils import getLabelToClassMapping
 from typing import Tuple, List
 
@@ -13,10 +13,10 @@ from benchmark import storeReportToCSV
 
 parser = argparse.ArgumentParser(description='Benchmark MSDNet variants.')
 parser.add_argument('--batch_size', metavar='N', type=int, default=1, help='Batchsize for training or validation run.')
-parser.add_argument('--bench_type', type=str, default=None, choices=['quality', 'speed'], help='Execute only the specfied benchmark type.')
+parser.add_argument('--bench_type', type=str, default=None, choices=['quality', 'speed', 'report'], help='Execute only the specfied benchmark type.')
 parser.add_argument('--runs', metavar='N', type=int, default=30, help='Number of runs to collect data for each item to benchmark.')
-parser.add_argument('--data_root', type=str, default=REDUCED_SET_PATH, help='Root path for a prepared zipped dataset.')
-parser.add_argument('--report_path', type=str, default='reports', help='Root path for storing reports.')
+parser.add_argument('--data_root', type=str, default=FULL_SET_PATH, help='Root path for a prepared zipped dataset.')
+parser.add_argument('--report_path', type=str, default=os.path.join(os.getcwd(), 'reports'), help='Root path for storing reports.')
 parser.add_argument('--state_path', type=str, default=os.path.join(os.getcwd(), 'state'), help='Absolute path to the directory containing checkpoints for the model.')
 
 def runSpeedBench(args, arch: str, max_classifications: int) ->float:
@@ -121,6 +121,50 @@ def executeQualityBench(args, model_max: Tuple[str, int]):
 
         storeReportToCSV(args.report_path, f'quality-{arch_name}-run.csv', stats)
 
+def executeClassificationReportBench(args, model_max: Tuple[str, int]):
+    loader = getDataLoader(args)
+    arch_name = f'{model_max[0]}{model_max[1]}'
+
+    label_to_classes = getLabelToClassMapping(os.path.join(os.getcwd(), args.data_root))
+
+    model = getModel(arch_name)
+    
+    if torch.cuda.is_available():
+        model = torch.nn.DataParallel(model).cuda()
+    
+    model, _, _, _ = resumeFromPath(os.path.join(args.state_path, f'{arch_name}_model_best.pth.tar'), model)
+
+    stats = {
+        'classifier': [],
+        'arch': [],
+        'acc': [],
+        'prec': [],
+        'rec': [],
+        'f1': [],
+        'ground_truth': [],
+        'prediction': []
+    }
+
+    for max_classifications in range(1, model_max[1] + 1):
+        logging.info(f'Running with Classification on Layer {max_classifications}')
+        model.setMaxClassifiers(max_classifications)
+        model.eval()
+
+        pred, grndT = evaluateModel(args, model, loader, label_to_classes)
+
+        acc, prec, rec, f1 = getClassificationValues(pred, grndT)
+
+        stats['classifier'].append(max_classifications)
+        stats['arch'].append(arch_name)
+        stats['acc'].append(acc)
+        stats['prec'].append(prec)
+        stats['rec'].append(rec)
+        stats['f1'].append(f1)
+        stats['ground_truth'].append(grndT)
+        stats['prediction'].append(pred)
+    
+    storeReportToCSV(args.report_path, f'report-{arch_name}-run.csv', stats)
+
 if __name__ == "__main__":
     
     logging.basicConfig(level=logging.INFO)
@@ -128,7 +172,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     model_and_max = [('msdnet', 4), ('msdnet', 5), ('msdnet', 10)]
-    model_and_max = [('msdnet', 10)]
     print(args)
     print(model_and_max)
 
@@ -137,3 +180,6 @@ if __name__ == "__main__":
 
     if args.bench_type is None or args.bench_type == 'quality':
         executeQualityBench(args, model_and_max)
+    
+    if args.bench_type is not None and args.bench_type == 'report':
+        executeClassificationReportBench(args, model_and_max[1])
