@@ -10,7 +10,7 @@ from tqdm import tqdm
 from utils import getModelWithOptimized, resumeFromPath
 from timeit import default_timer as timer
 from data.utils import getLabelToClassMapping
-from data.ImagenetDataset import get_zipped_dataloaders, REDUCED_SET_PATH
+from data.ImagenetDataset import get_zipped_dataloaders, REDUCED_SET_PATH, FULL_SET_PATH
 from sklearn import metrics
 from collections import OrderedDict
 
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     densenet_archs = [x.replace('-none', '') for x in densenet_archs]
     
     #resnet_archs = ['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152']
-    resnet_archs = ['resnet101']
+    resnet_archs = ['resnet101', 'resnet152']
     resnet_pol = ['-none', '-drop-rand-n', '-drop-last-rand-n', '-drop-norm-n']
     
     resnet_archs = [x + y for x in resnet_archs for y in resnet_pol]
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     args.skip_layers_values = skip_layers_values
     args.bench_types = bench_types
     args.runs = 30
-    args.data_root = REDUCED_SET_PATH
+    args.data_root = FULL_SET_PATH#REDUCED_SET_PATH
     args.reports_path = os.path.join(os.getcwd(), 'reports')
     args.state_path = STATE_DICT_PATH
     args.batch_size = 1 if not 'batch_size' in args else args.batch_size
