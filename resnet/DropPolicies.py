@@ -34,7 +34,10 @@ class ResNetDropRandNPolicy(ResnetDropResidualPolicy):
         self._n = n
         self.skipConfigurationList = []
 
-    def shouldDrop(self) -> bool:
+    def shouldDrop(self, idx=None) -> bool:
+        if idx is not None:
+            return self.skipConfigurationList[idx]
+
         # check predefined values
         self.dropCount += 1
         return self.skipConfigurationList[self.dropCount - 1]

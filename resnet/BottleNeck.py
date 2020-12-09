@@ -14,10 +14,14 @@ class BottleNeck(nn.Module):
     """
     dropPolicy = None
     expansion = 4
-    def __init__(self, in_channels, out_channels, stride=1, use_ocl=False, dropResidualPolicy=None):
+
+    def __init__(self, in_channels, out_channels, stride=1, use_ocl=False, dropResidualPolicy=None, layer_nr=None):
         super().__init__()
         
-        if dropResidualPolicy is not None: self.dropPolicy = dropResidualPolicy
+        if dropResidualPolicy is not None: 
+            self.dropPolicy = dropResidualPolicy
+            self.layer_nr = layer_nr
+
         # defining pipeline for residual calculation
         self.residual_function = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
@@ -41,7 +45,8 @@ class BottleNeck(nn.Module):
             )
         
     def forward(self, x):
-        if self.dropPolicy and self.dropPolicy.shouldDrop():
+        if self.dropPolicy and self.dropPolicy.shouldDrop(self.layer_nr):
+        #if self.dropPolicy and self.shouldDrop:
             return nn.ReLU(inplace=True)(self.shortcut(x))
         return nn.ReLU(inplace=True)(self.residual_function(x) + self.shortcut(x))
     

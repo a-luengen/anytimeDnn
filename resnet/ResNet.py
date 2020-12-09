@@ -38,6 +38,7 @@ class ResNet(nn.Module):
 
         if self.dropPolicy is not None:
             self.dropPolicy.setMaxSkipableLayers(self.skipable_layer_count)
+            self.dropPolicy.reset()
 
     def _make_layer(self, block, out_channels, num_blocks, stride):
         """
@@ -60,7 +61,7 @@ class ResNet(nn.Module):
         layers = []
         for stride in strides:
             #layers.append(block(self.in_channels, out_channels, stride, use_ocl=self.use_ocl))
-            layers.append(block(self.in_channels, out_channels, stride, dropResidualPolicy=self.dropPolicy))
+            layers.append(block(self.in_channels, out_channels, stride, dropResidualPolicy=self.dropPolicy, layer_nr=self.skipable_layer_count))
             self.in_channels = out_channels * block.expansion
             self.skipable_layer_count += 1
         
