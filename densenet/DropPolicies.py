@@ -47,8 +47,8 @@ class DenseNetDropRandNPolicy(DenseNetDropNPolicy):
 
 class DenseNetDropLastNPolicy(DenseNetDropNPolicy):
     """
-        Drops a random amount of last layers within a block, but always 
-        exactly n layers.
+        Drops a random amount of last layers within blocks, but always 
+        a global amount of exactly n layers.
     """
 
     name = 'skip-last'
