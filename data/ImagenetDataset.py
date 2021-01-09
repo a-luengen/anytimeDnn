@@ -19,13 +19,28 @@ TRAIN_SPLIT_DEFAULT = 0.9
 FULL_SET_PATH = "data/imagenet_full"
 REDUCED_SET_PATH = "data/imagenet_red"
 
-# source:
-# https://gist.github.com/mf1024/a9199a325f9f7e98309b19eb820160a7
-# Thanks mate!
-
 class ImagenetDataset(Dataset):
+    """"
+        Implementation of a Dataset for accessing ImageNet images
+        on a default directory based imagenet set.
+
+        data_path -- path of the root directory containing subdirectories 
+        per class with images of the class
+        is_train -- specifiy wether to use images for training
+        train_split -- ratio for train- and validation-set split (default 0.9)
+        
+        Keyword arguments: 
+        random_seed -- random seed for picking random train/validation-split (default 42)
+        num_classes -- if set to True, amount of classes to use from the imagenet dataset
+        will be determined dynamically (default None)
+
+        source:
+        https://gist.github.com/mf1024/a9199a325f9f7e98309b19eb820160a7
+        Thanks mate!
+    """
+
     def __init__(self, data_path, is_train, train_split = TRAIN_SPLIT_DEFAULT, 
-        random_seed = 42, target_transform = None, num_classes = None ):
+        random_seed = 42, num_classes = None ):
         super(ImagenetDataset, self).__init__()
 
         self.data_path = data_path
@@ -128,6 +143,19 @@ def get_imagenet_datasets(data_path, random_seed = None, num_classes = None):
     return dataset_train, dataset_test
 
 class ZippedDataset(torch.utils.data.Dataset):
+    """
+        Dataset implementation based on custom generated 
+        subset of the imagenet dataset.
+        Images are stored with some preprocessing already
+        done within a zip file, for easier transfer 
+        between systems.
+
+        arch_path -- path to the zip-file
+        index_path -- path to the index file, containing information of the class label per index
+        
+        Keyword arguments:
+        transform -- optional transformation to perform on the images when accessing them (default transforms.ToTensor())
+    """
     img_class_mapping = []
     archive = None
     class_to_label = []
@@ -157,14 +185,30 @@ class ZippedDataset(torch.utils.data.Dataset):
         return classToLabelMapping
 
 def get_zipped_dataloaders(data_path: str, batch_size: int, num_worker=1, use_valid=False) -> (DataLoader, DataLoader, DataLoader):
+    """
+        Returns dataloader instances of the ZippedDataset for training,
+        validation and testing.
+
+        data_path -- Path to the zip-file for the ZippedDataset
+        batch_size -- Amount of samples contained per returned tensor of the dataset
+
+        Keyword arguments: 
+        num_worker -- Used for the DataSet class, should be 1 or results in runtime errors
+        use_valid -- If True, the validation and test set are seperate DataSets (default False)
+    """
     train_transforms = transforms.Compose([
         transforms.RandomCrop(224),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor()
     ])
 
-    train_set = ZippedDataset(os.path.join(data_path, 'index-train.zip'), os.path.join(data_path, 'index-train.txt'), transform=train_transforms)
-    val_set = ZippedDataset(os.path.join(data_path, 'index-val.zip'), os.path.join(data_path, 'index-val.txt'))
+    train_set = ZippedDataset(
+        os.path.join(data_path, 'index-train.zip'), 
+        os.path.join(data_path, 'index-train.txt'), 
+        transform=train_transforms)
+    val_set = ZippedDataset(
+        os.path.join(data_path, 'index-val.zip'), 
+        os.path.join(data_path, 'index-val.txt'))
 
     if use_valid:
         num_sample_valid = int(len(train_set) * 0.1)

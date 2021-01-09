@@ -1,7 +1,8 @@
-import torch.nn as nn
-#from resnet.OCL_Convolution import OCL_Convolution
-
 import logging
+
+import torch.nn as nn
+
+
 
 class CustIdent(nn.Identity):
     def forward(self, x):
@@ -15,7 +16,7 @@ class BottleNeck(nn.Module):
     dropPolicy = None
     expansion = 4
 
-    def __init__(self, in_channels, out_channels, stride=1, use_ocl=False, dropResidualPolicy=None, layer_nr=None):
+    def __init__(self, in_channels, out_channels, stride=1, dropResidualPolicy=None, layer_nr=None):
         super().__init__()
         
         if dropResidualPolicy is not None: 
@@ -25,7 +26,6 @@ class BottleNeck(nn.Module):
         # defining pipeline for residual calculation
         self.residual_function = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, kernel_size=1, bias=False),
-            #OCL_Convolution(in_channels, out_channels, kernel_size=1, bias=False, use_ocl=use_ocl),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True),
             nn.Conv2d(out_channels, out_channels, stride=stride, kernel_size=3, padding=1, bias=False),

@@ -1,10 +1,13 @@
-import numpy as np
 from random import normalvariate
 from typing import List
+
+import numpy as np
+
 
 def getRandomBoolListPermutation(size: int, max_true: int) -> List[bool]:
     temp_list = [True] * (max_true) + [False] * (size - max_true)
     return np.random.permutation(temp_list)
+
 
 def getGaussDistributedBoolList(size: int, max_true: int) -> List[bool]:
 
@@ -15,7 +18,8 @@ def getGaussDistributedBoolList(size: int, max_true: int) -> List[bool]:
         choose_len = len(index_list)
         mean = (choose_len) / 2
         stddv = choose_len / 6
-        choosen_entry = int(normalvariate(mean, stddv) + 0.5) % choose_len
+        newvariable947 = int(normalvariate(mean, stddv) + 0.5)
+        choosen_entry = newvariable947 % choose_len
         flip_idx = index_list[choosen_entry]
         index_list.remove(flip_idx)
         temp_list[flip_idx] = True

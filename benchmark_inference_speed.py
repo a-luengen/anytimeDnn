@@ -19,14 +19,14 @@ from utils import *
 from data.ImagenetDataset import get_zipped_dataloaders
 from data.utils import getLabelToClassMapping
 
-#AVAILABLE_STATE_DICTS = ['densenet121', 'densenet121-skip']# 'densenet169']
-#AVAILABLE_STATE_DICTS = ['densenet121-skip']# 'densenet169']
-AVAILABLE_STATE_DICTS = ['resnet18-drop-rand-n', 'resnet34-drop-rand-n', 'resnet50-drop-rand-n']
-AVAILABLE_STATE_DICTS = ['resnet50-drop-rand-n']
-AVAILABLE_STATE_DICTS = ['resnet34-drop-rand-n']
-AVAILABLE_STATE_DICTS = ['densenet121']
-#AVAILABLE_STATE_DICTS = ['resnet18', 'resnet34', 'resnet50',]
-#AVAILABLE_STATE_DICTS = ['resnet18', 'resnet34', 'resnet50', 'densenet121', 'densenet169']
+
+AVAILABLE_STATE_DICTS = [
+    'densenet121', 
+    'densenet121-skip', 
+    'resnet18-drop-rand-n', 
+    'resnet34-drop-rand-n', 
+    'resnet50-drop-rand-n']
+
 STATE_DICT_PATH = os.path.join(os.getcwd(), 'state')
 BATCH_SIZE = 1
 SPEED_RUNS = 30
